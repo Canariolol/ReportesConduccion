@@ -139,8 +139,7 @@ function generateDashboard() {
 function generateMetrics() {
     const metricsGrid = document.getElementById('metricsGrid');
     const totalAlarmas = currentData.videos.length; // Unificado: Total de Alarmas
-    // Contar tipos de alarma, sumando 1 porque el array cuenta desde 0
-    const tiposAlarma = Object.keys(currentData.summary).length + 1;
+    const tiposAlarma = Object.keys(currentData.summary).length;
     
     // Obtener patente única o mostrar múltiples si hay varias
     const patentes = [...new Set(currentData.videos.map(v => v.vehiculo).filter(v => v))];
@@ -1007,22 +1006,13 @@ function generateReportTitle() {
         const patentes = [...new Set(currentData.videos.map(v => v.vehiculo).filter(v => v))];
         const patenteTexto = patentes.length === 1 ? patentes[0] : 'múltiples vehículos';
         
-        // Extraer rango de fechas desde el nombre del archivo
-        // Busca patrones tipo "04 al 16 de septiembre"
-        let fechas = [];
-        const fileName = currentData.fileName || '';
-        // Busca patrón "dd al dd de mes" (ej: "04 al 16 de septiembre")
-        const rangoMatch = fileName.match(/(\d{2})\s*al\s*(\d{2})\s*de\s*([a-zA-Záéíóúñ]+)/i);
-        if (rangoMatch) {
-            // Ejemplo: ["04 al 16 de septiembre", "04", "16", "septiembre"]
-            fechas = [`${rangoMatch[1]} de ${rangoMatch[3]}`, `${rangoMatch[2]} de ${rangoMatch[3]}`];
-        } else {
-            // Busca patrón "dd de mes" (ej: "16 de septiembre")
-            const fechaMatch = fileName.match(/(\d{2})\s*de\s*([a-zA-Záéíóúñ]+)/i);
-            if (fechaMatch) {
-            fechas = [`${fechaMatch[1]} de ${fechaMatch[2]}`];
+        // Extraer rango de fechas de los datos
+        const fechas = [...new Set(currentData.videos.map(v => {
+            if (v.hora) {
+                return v.hora.split(',')[0].trim();
             }
-        }
+            return null;
+        }).filter(f => f))].sort();
         
         let rangoFechas = '';
         if (fechas.length > 0) {
