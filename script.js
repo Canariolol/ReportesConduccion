@@ -226,12 +226,12 @@ function generateAlarmTypeChart() {
         if (normalizado.includes('distraido')) return '#f57c00';
         if (normalizado.includes('cruce')) return '#7b1fa2';
         if (normalizado.includes('distancia')) return '#1976d2';
-        if (normalizado.includes('fatiga')) return '#ef6c00';
-        if (normalizado.includes('frenada')) return '#00796b';
-        if (normalizado.includes('stop')) return '#424242';
+        if (normalizado.includes('fatiga')) return '#ebe983ff';
+        if (normalizado.includes('frenada')) return '#26b170ff';
+        if (normalizado.includes('stop')) return '#665757ff';
         if (normalizado.includes('telefono')) return '#00695c';
-        if (normalizado.includes('boton')) return '#2e7d32';
-        if (normalizado.includes('video')) return '#6a1b9a';
+        if (normalizado.includes('boton')) return '#5eb8a1ff';
+        if (normalizado.includes('video')) return '#c290e0ff';
         return '#64b5f6'; // Color por defecto
     });
     
@@ -373,12 +373,12 @@ function generateBarChart() {
         if (normalizado.includes('distraido')) return '#f57c00';
         if (normalizado.includes('cruce')) return '#7b1fa2';
         if (normalizado.includes('distancia')) return '#1976d2';
-        if (normalizado.includes('fatiga')) return '#ef6c00';
-        if (normalizado.includes('frenada')) return '#00796b';
-        if (normalizado.includes('stop')) return '#424242';
+        if (normalizado.includes('fatiga')) return '#ebe983ff';
+        if (normalizado.includes('frenada')) return '#26b170ff';
+        if (normalizado.includes('stop')) return '#665757ff';
         if (normalizado.includes('telefono')) return '#00695c';
-        if (normalizado.includes('boton')) return '#2e7d32';
-        if (normalizado.includes('video')) return '#6a1b9a';
+        if (normalizado.includes('boton')) return '#5eb8a1ff';
+        if (normalizado.includes('video')) return '#c290e0ff';
         return '#64b5f6';
     });
     
@@ -704,234 +704,269 @@ function exportToExcel() {
 function exportToPDF() {
     showExportModal();
     
-    // Verificar si jsPDF está disponible
-    if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined') {
-        console.error('jsPDF no está disponible');
-        alert('Error: La biblioteca jsPDF no está cargada correctamente. Por favor, recarga la página e intenta nuevamente.');
-        hideExportModal();
-        return;
-    }
-    
-    // Usar el método híbrido que captura la visualización completa
-    exportToPDFHybrid();
+    // Usar el método de captura completa del dashboard para mantener la calidad visual
+    exportDashboardToPDF();
 }
 
-function exportToPDFHybrid() {
+function exportDashboardToPDF() {
     // Verificar si html2canvas está disponible
     if (typeof html2canvas === 'undefined') {
         // Cargar html2canvas dinámicamente si no está disponible
         const script = document.createElement('script');
         script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-        script.onload = function() {
-            captureDashboardToPDF();
-        };
+        script.onload = () => captureDashboardForPDF();
         document.head.appendChild(script);
     } else {
-        captureDashboardToPDF();
+        captureDashboardForPDF();
     }
     
-    function captureDashboardToPDF() {
-        const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF('p', 'mm', 'a4');
+    function captureDashboardForPDF() {
+        const dashboardElement = document.getElementById('dashboard');
         
-        // Configuración de la página
-        const pageWidth = pdf.internal.pageSize.getWidth();
-        const pageHeight = pdf.internal.pageSize.getHeight();
-        const margin = 15;
-        
-        // Cargar logo para agregarlo a cada página
-        const logoImg = new Image();
-        logoImg.onload = function() {
-            // Función para agregar logo a una página específica
-            function addLogoToPage(pageNumber) {
-                if (pageNumber > 0) {
-                    pdf.setPage(pageNumber);
-                    const logoWidth = 25;
-                    const logoHeight = (logoImg.height * logoWidth) / logoImg.width;
-                    pdf.addImage(logoImg, 'PNG', margin, margin, logoWidth, logoHeight);
-                }
-            }
-            
-            // Función para agregar pie de página a una página específica
-            function addFooterToPage(pageNumber) {
-                if (pageNumber > 0) {
-                    pdf.setPage(pageNumber);
-                    pdf.setFontSize(8);
-                    pdf.setTextColor(150, 150, 150);
-                    const footerText = `Generado por West Fleet Solutions - Página ${pageNumber}`;
-                    pdf.text(footerText, pageWidth - margin, pageHeight - 10, { align: 'right' });
-                }
-            }
-            
-            // Capturar diferentes secciones del dashboard por separado
-            const dashboardElement = document.getElementById('dashboard');
-            const sections = [
-                { element: document.querySelector('#reportTitle'), name: 'Título' },
-                { element: document.querySelector('.metrics-grid'), name: 'Métricas' },
-                { element: document.querySelector('.filters'), name: 'Filtros' },
-                { element: document.querySelector('.charts-grid'), name: 'Gráficos' },
-                { element: document.querySelector('.table-container'), name: 'Tabla' }
-            ];
-            
-            let currentPage = 1;
-            let yPosition = margin + 30; // Espacio para el logo
-            
-            // Agregar logo a la primera página
-            addLogoToPage(currentPage);
-            
-            // Procesar cada sección
-            const sectionPromises = sections.map((section, index) => {
-                return new Promise((resolve) => {
-                    if (!section.element) {
-                        resolve();
-                        return;
-                    }
-                    
-                    html2canvas(section.element, {
-                        scale: 1.5,  // Calidad moderada para reducir tamaño
-                        useCORS: true,
-                        backgroundColor: '#ffffff',
-                        logging: false,
-                        width: section.element.scrollWidth,
-                        height: section.element.scrollHeight
-                    }).then(canvas => {
-                        const imgData = canvas.toDataURL('image/jpeg', 0.7); // JPEG con compresión
-                        
-                        const maxWidth = pageWidth - 2 * margin;
-                        const imgHeight = (canvas.height * maxWidth) / canvas.width;
-                        
-                        // Verificar si necesitamos una nueva página
-                        if (yPosition + imgHeight > pageHeight - margin - 20) {
-                            currentPage++;
-                            pdf.addPage();
-                            addLogoToPage(currentPage);
-                            yPosition = margin + 30;
-                        }
-                        
-                        // Agregar la sección
-                        pdf.addImage(imgData, 'JPEG', margin, yPosition, maxWidth, imgHeight);
-                        yPosition += imgHeight + 10;
-                        
-                        resolve();
-                    }).catch(() => {
-                        resolve();
-                    });
-                });
-            });
-            
-            // Esperar a que todas las secciones se procesen
-            Promise.all(sectionPromises).then(() => {
-                // Agregar pie de página a todas las páginas
-                for (let i = 1; i <= currentPage; i++) {
-                    addFooterToPage(i);
-                }
-                
-                // Obtener patente única o mostrar múltiples si hay varias
-                const patentes = [...new Set(currentData.videos.map(v => v.vehiculo).filter(v => v))];
-                const patenteTexto = patentes.length === 1 ? patentes[0].replace(/[^a-zA-Z0-9]/g, '_') : 'Multiples_Vehiculos';
-                
-                // Descargar PDF
-                pdf.save(`Reporte_${patenteTexto}_${new Date().toISOString().split('T')[0]}.pdf`);
-                hideExportModal();
-            }).catch(error => {
-                console.error('Error al generar PDF:', error);
-                alert('Error al generar el PDF. Por favor, intenta nuevamente.');
-                hideExportModal();
-            });
-        };
-        
-        logoImg.onerror = function() {
-            console.warn('No se pudo cargar el logo. Continuando sin logo.');
-            // Si no se puede cargar el logo, generar PDF sin él
-            generatePDFWithoutLogo();
-        };
-        
-        logoImg.src = 'west_logo.png';
-    }
-    
-    function generatePDFWithoutLogo() {
-        const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        
-        // Configuración de la página
-        const pageWidth = pdf.internal.pageSize.getWidth();
-        const pageHeight = pdf.internal.pageSize.getHeight();
-        const margin = 15;
-        
-        // Capturar diferentes secciones del dashboard por separado
-        const sections = [
-            { element: document.querySelector('#reportTitle'), name: 'Título' },
-            { element: document.querySelector('.metrics-grid'), name: 'Métricas' },
-            { element: document.querySelector('.filters'), name: 'Filtros' },
-            { element: document.querySelector('.charts-grid'), name: 'Gráficos' },
-            { element: document.querySelector('.table-container'), name: 'Tabla' }
-        ];
-        
-        let currentPage = 1;
-        let yPosition = margin;
-        
-        // Procesar cada sección
-        const sectionPromises = sections.map((section, index) => {
+        // Forzar renderizado de gráficos antes de capturar
+        function forceChartsRendering() {
             return new Promise((resolve) => {
-                if (!section.element) {
+                const charts = document.querySelectorAll('canvas');
+                let loadedCharts = 0;
+                
+                if (charts.length === 0) {
                     resolve();
                     return;
                 }
                 
-                html2canvas(section.element, {
-                    scale: 1.5,  // Calidad moderada para reducir tamaño
+                charts.forEach((chart, index) => {
+                    // Dar tiempo adicional para que los gráficos se rendericen completamente
+                    setTimeout(() => {
+                        loadedCharts++;
+                        if (loadedCharts === charts.length) {
+                            resolve();
+                        }
+                    }, 200 * index); // Escalonar la carga de gráficos
+                });
+            });
+        }
+        
+        // Función para obtener logo
+        async function getLogo() {
+            // Estrategia 1: Intentar obtener logo del DOM
+            function getLogoFromDOM() {
+                return new Promise((resolve) => {
+                    const logoElements = document.querySelectorAll('img[src*="west_logo"], img[alt*="West"], img[alt*="west"], .logo img');
+                    
+                    if (logoElements.length > 0) {
+                        const logoImg = logoElements[0];
+                        
+                        if (logoImg.complete && logoImg.naturalWidth > 0) {
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d');
+                            canvas.width = logoImg.naturalWidth;
+                            canvas.height = logoImg.naturalHeight;
+                            
+                            try {
+                                ctx.drawImage(logoImg, 0, 0);
+                                const logoData = {
+                                    data: canvas.toDataURL('image/png'),
+                                    width: canvas.width,
+                                    height: canvas.height
+                                };
+                                resolve(logoData);
+                            } catch (error) {
+                                console.warn('Error al procesar logo del DOM:', error);
+                                resolve(null);
+                            }
+                        } else {
+                            logoImg.onload = function() {
+                                const canvas = document.createElement('canvas');
+                                const ctx = canvas.getContext('2d');
+                                canvas.width = logoImg.naturalWidth;
+                                canvas.height = logoImg.naturalHeight;
+                                
+                                try {
+                                    ctx.drawImage(logoImg, 0, 0);
+                                    const logoData = {
+                                        data: canvas.toDataURL('image/png'),
+                                        width: canvas.width,
+                                        height: canvas.height
+                                    };
+                                    resolve(logoData);
+                                } catch (error) {
+                                    console.warn('Error al procesar logo del DOM después de carga:', error);
+                                    resolve(null);
+                                }
+                            };
+                            
+                            logoImg.onerror = function() {
+                                console.warn('No se pudo cargar la imagen del DOM');
+                                resolve(null);
+                            };
+                        }
+                    } else {
+                        resolve(null);
+                    }
+                });
+            }
+            
+            // Estrategia 2: Intentar cargar logo desde URL externa
+            function getLogoFromURL() {
+                return new Promise((resolve) => {
+                    const logoImg = new Image();
+                    logoImg.crossOrigin = 'anonymous';
+                    
+                    logoImg.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        canvas.width = logoImg.width;
+                        canvas.height = logoImg.height;
+                        
+                        try {
+                            ctx.drawImage(logoImg, 0, 0);
+                            const logoData = {
+                                data: canvas.toDataURL('image/png'),
+                                width: canvas.width,
+                                height: canvas.height
+                            };
+                            resolve(logoData);
+                        } catch (error) {
+                            console.warn('Error al procesar logo desde URL:', error);
+                            resolve(null);
+                        }
+                    };
+                    
+                    logoImg.onerror = function() {
+                        console.warn('No se pudo cargar el logo desde URL externa');
+                        resolve(null);
+                    };
+                    
+                    logoImg.src = 'https://www.west-ingenieria.cl/imgs/west_logo.png';
+                });
+            }
+            
+            // Intentar estrategias en orden
+            let logo = await getLogoFromDOM();
+            if (!logo) {
+                logo = await getLogoFromURL();
+            }
+            
+            return logo;
+        }
+        
+        // Generar PDF con captura de alta calidad
+        async function generateHighQualityPDF() {
+            try {
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                
+                // Configuración de la página
+                const pageWidth = pdf.internal.pageSize.getWidth();
+                const pageHeight = pdf.internal.pageSize.getHeight();
+                const margin = 10; // Reducir margen para más espacio
+                
+                // Obtener logo
+                const logo = await getLogo();
+                
+                // Forzar renderizado de gráficos
+                await forceChartsRendering();
+                
+                // Capturar el dashboard completo con alta calidad
+                html2canvas(dashboardElement, {
+                    scale: 3, // Alta calidad para evitar pixelación
                     useCORS: true,
                     backgroundColor: '#ffffff',
                     logging: false,
-                    width: section.element.scrollWidth,
-                    height: section.element.scrollHeight
+                    width: dashboardElement.scrollWidth,
+                    height: dashboardElement.scrollHeight,
+                    // Configuración especial para asegurar calidad de gráficos
+                    onclone: (clonedDoc) => {
+                        // Forzar que todos los canvas se redibujen
+                        const canvases = clonedDoc.querySelectorAll('canvas');
+                        canvases.forEach(canvas => {
+                            const ctx = canvas.getContext('2d');
+                            const img = new Image();
+                            img.onload = () => {
+                                ctx.drawImage(img, 0, 0);
+                            };
+                            img.src = canvas.toDataURL();
+                        });
+                    }
                 }).then(canvas => {
-                    const imgData = canvas.toDataURL('image/jpeg', 0.7); // JPEG con compresión
+                    // Convertir a imagen con compresión balanceada
+                    const imgData = canvas.toDataURL('image/jpeg', 0.85); // Calidad alta pero comprimida
                     
-                    const maxWidth = pageWidth - 2 * margin;
-                    const imgHeight = (canvas.height * maxWidth) / canvas.width;
+                    const pdfWidth = pageWidth - 2 * margin;
+                    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
                     
-                    // Verificar si necesitamos una nueva página
-                    if (yPosition + imgHeight > pageHeight - margin - 20) {
-                        currentPage++;
-                        pdf.addPage();
-                        yPosition = margin;
+                    let heightLeft = pdfHeight;
+                    let position = 0;
+                    let currentPage = 1;
+                    
+                    // Función para agregar logo a una página
+                    function addLogoToPage(pageNum, logoData) {
+                        if (pageNum > 0 && logoData && logoData.data) {
+                            try {
+                                pdf.setPage(pageNum);
+                                const logoWidth = 20;
+                                const logoHeight = (logoData.height * logoWidth) / logoData.width;
+                                pdf.addImage(logoData.data, 'PNG', margin, margin, logoWidth, logoHeight);
+                            } catch (error) {
+                                console.warn('Error al agregar logo:', error);
+                            }
+                        }
                     }
                     
-                    // Agregar la sección
-                    pdf.addImage(imgData, 'JPEG', margin, yPosition, maxWidth, imgHeight);
-                    yPosition += imgHeight + 10;
+                    // Función para agregar pie de página
+                    function addFooterToPage(pageNum) {
+                        if (pageNum > 0) {
+                            pdf.setPage(pageNum);
+                            pdf.setFontSize(6);
+                            pdf.setTextColor(150, 150, 150);
+                            const footerText = `Generado por West Ingeniería - Página ${pageNum}`;
+                            pdf.text(footerText, pageWidth - margin, pageHeight - 5, { align: 'right' });
+                        }
+                    }
                     
-                    resolve();
-                }).catch(() => {
-                    resolve();
+                    // Primera página con logo
+                    addLogoToPage(currentPage, logo);
+                    pdf.addImage(imgData, 'JPEG', margin, margin + 25, pdfWidth, pdfHeight);
+                    heightLeft -= pageHeight - margin - 25;
+                    
+                    // Páginas adicionales si es necesario
+                    while (heightLeft >= 0) {
+                        currentPage++;
+                        pdf.addPage();
+                        addLogoToPage(currentPage, logo);
+                        position = heightLeft - pdfHeight;
+                        pdf.addImage(imgData, 'JPEG', margin, position, pdfWidth, pdfHeight);
+                        heightLeft -= pageHeight;
+                    }
+                    
+                    // Agregar pie de página a todas las páginas
+                    for (let i = 1; i <= currentPage; i++) {
+                        addFooterToPage(i);
+                    }
+                    
+                    // Obtener patente para el nombre del archivo
+                    const patentes = [...new Set(currentData.videos.map(v => v.vehiculo).filter(v => v))];
+                    const patenteTexto = patentes.length === 1 ? patentes[0].replace(/[^a-zA-Z0-9]/g, '_') : 'Multiples_Vehiculos';
+                    
+                    // Descargar PDF
+                    pdf.save(`Reporte_${patenteTexto}_${new Date().toISOString().split('T')[0]}.pdf`);
+                    hideExportModal();
+                    
+                }).catch(error => {
+                    console.error('Error al capturar dashboard:', error);
+                    alert('Error al generar el PDF. Por favor, intenta nuevamente.');
+                    hideExportModal();
                 });
-            });
-        });
-        
-        // Esperar a que todas las secciones se procesen
-        Promise.all(sectionPromises).then(() => {
-            // Agregar pie de página a todas las páginas
-            for (let i = 1; i <= currentPage; i++) {
-                pdf.setPage(i);
-                pdf.setFontSize(8);
-                pdf.setTextColor(150, 150, 150);
-                const footerText = `Generado por West Fleet Solutions - Página ${i}`;
-                pdf.text(footerText, pageWidth - margin, pageHeight - 10, { align: 'right' });
+                
+            } catch (error) {
+                console.error('Error al generar PDF de alta calidad:', error);
+                alert('Error al generar el PDF. Por favor, intenta nuevamente.');
+                hideExportModal();
             }
-            
-            // Obtener patente única o mostrar múltiples si hay varias
-            const patentes = [...new Set(currentData.videos.map(v => v.vehiculo).filter(v => v))];
-            const patenteTexto = patentes.length === 1 ? patentes[0].replace(/[^a-zA-Z0-9]/g, '_') : 'Multiples_Vehiculos';
-            
-            // Descargar PDF
-            pdf.save(`Reporte_${patenteTexto}_${new Date().toISOString().split('T')[0]}.pdf`);
-            hideExportModal();
-        }).catch(error => {
-            console.error('Error al generar PDF:', error);
-            alert('Error al generar el PDF. Por favor, intenta nuevamente.');
-            hideExportModal();
-        });
+        }
+        
+        // Iniciar generación del PDF
+        generateHighQualityPDF();
     }
 }
 
