@@ -159,7 +159,7 @@ La aplicación utiliza una paleta profesional con gradientes:
 - [ ] **Filtros avanzados** por rangos de fechas y severidad
 - [ ] **Reportes programados** y envío automático por correo
 - [ ] **Panel de administración** para gestión de usuarios
-- [ ] **Múltiples idiomas** (inglés, portugués)
+- [ ] **Múltiples idiomas** (inglés, portugués, español)
 
 ### Mejoras Técnicas
 - [ ] **Optimización de rendimiento** para grandes volúmenes de datos

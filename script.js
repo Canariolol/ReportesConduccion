@@ -1,6 +1,7 @@
 let currentData = {
     summary: {},
     videos: [],
+    videosSolicitados: [],
     fileName: ''
 };
 
@@ -98,8 +99,9 @@ function parseData(summaryData, videosData) {
         }
     }
     
-    // Parsear videos
+    // Parsear hoja videos
     currentData.videos = [];
+    currentData.videosSolicitados = []; // Array separado para videos solicitados
     const headers = videosData[0];
     for (let i = 1; i < videosData.length; i++) {
         const row = videosData[i];
@@ -112,7 +114,13 @@ function parseData(summaryData, videosData) {
                 comentario: row[6] || '',
                 severidad: row[7] || ''
             };
-            currentData.videos.push(video);
+            
+            // Separar videos solicitados del resto de alarmas
+            if (video.tipo.toLowerCase().includes('video solicitado') || video.tipo.toLowerCase().includes('vídeo solicitado')) {
+                currentData.videosSolicitados.push(video);
+            } else {
+                currentData.videos.push(video);
+            }
         }
     }
 }
@@ -138,18 +146,33 @@ function generateDashboard() {
 
 function generateMetrics() {
     const metricsGrid = document.getElementById('metricsGrid');
-    const totalAlarmas = currentData.videos.length; // Unificado: Total de Alarmas
-    // Contar tipos de alarma, sumando 1 porque el array cuenta desde 0
-    const tiposAlarma = Object.keys(currentData.summary).length + 1;
+    const totalAlarmas = currentData.videos.length; // Total de Alarmas (excluyendo videos solicitados)
+    const videosSolicitados = currentData.videosSolicitados.length; // Total de Videos Solicitados
+    
+    // Contar tipos de alarma reales de los datos (excluyendo videos solicitados)
+    const tiposAlarmaSet = new Set();
+    currentData.videos.forEach(video => {
+        if (video.tipo && !video.tipo.toLowerCase().includes('video solicitado') && !video.tipo.toLowerCase().includes('vídeo solicitado')) {
+            tiposAlarmaSet.add(video.tipo);
+        }
+    });
+    const tiposAlarma = tiposAlarmaSet.size;
     
     // Obtener patente única o mostrar múltiples si hay varias
-    const patentes = [...new Set(currentData.videos.map(v => v.vehiculo).filter(v => v))];
-    const patenteTexto = patentes.length === 1 ? patentes[0] : `${patentes.length} vehículos`;
+    const todasLasPatentes = [...new Set([
+        ...currentData.videos.map(v => v.vehiculo),
+        ...currentData.videosSolicitados.map(v => v.vehiculo)
+    ].filter(v => v))];
+    const patenteTexto = todasLasPatentes.length === 1 ? todasLasPatentes[0] : `${todasLasPatentes.length} vehículos`;
     
     metricsGrid.innerHTML = `
         <div class="metric-card">
             <h3>${totalAlarmas}</h3>
             <p>Total de Alarmas</p>
+        </div>
+        <div class="metric-card">
+            <h3>${videosSolicitados}</h3>
+            <p>Videos Solicitados</p>
         </div>
         <div class="metric-card">
             <h3>${tiposAlarma}</h3>
@@ -185,10 +208,10 @@ function generateAlarmTypeChart() {
         alarmTypeChart.destroy();
     }
     
-    // Contar tipos de alarma directamente de los videos para asegurar que se incluyan todos
+    // Contar tipos de alarma usando los datos filtrados
     const alarmCounts = {};
-    currentData.videos.forEach(video => {
-        if (video.tipo) {
+    filteredVideos.forEach(video => {
+        if (video.tipo && !video.tipo.toLowerCase().includes('video solicitado') && !video.tipo.toLowerCase().includes('vídeo solicitado')) {
             alarmCounts[video.tipo] = (alarmCounts[video.tipo] || 0) + 1;
         }
     });
@@ -279,9 +302,9 @@ function generateDailyChart() {
         dailyChart.destroy();
     }
     
-    // Agrupar eventos por día
+    // Agrupar eventos por día usando datos filtrados
     const dailyCount = {};
-    currentData.videos.forEach(video => {
+    filteredVideos.forEach(video => {
         if (video.hora) {
             const day = video.hora.split(',')[0];
             dailyCount[day] = (dailyCount[day] || 0) + 1;
@@ -332,10 +355,10 @@ function generateBarChart() {
         barChart.destroy();
     }
     
-    // Usar los mismos datos que el gráfico de torta
+    // Usar los mismos datos que el gráfico de torta (datos filtrados)
     const alarmCounts = {};
-    currentData.videos.forEach(video => {
-        if (video.tipo) {
+    filteredVideos.forEach(video => {
+        if (video.tipo && !video.tipo.toLowerCase().includes('video solicitado') && !video.tipo.toLowerCase().includes('vídeo solicitado')) {
             alarmCounts[video.tipo] = (alarmCounts[video.tipo] || 0) + 1;
         }
     });
@@ -410,9 +433,9 @@ function generateHourlyChart() {
         hourlyChart.destroy();
     }
     
-    // Agrupar eventos por hora del día
+    // Agrupar eventos por hora del día usando datos filtrados
     const hourlyCount = {};
-    currentData.videos.forEach(video => {
+    filteredVideos.forEach(video => {
         if (video.hora) {
             try {
                 // Extraer la hora del formato "dd/mm/yy, HH:MM:SS"
@@ -592,7 +615,17 @@ function applyFilters() {
         return true;
     });
     
+    // Actualizar tabla y gráficos
     updateTable();
+    updateChartsWithFilters();
+}
+
+function updateChartsWithFilters() {
+    // Actualizar gráficos con los datos filtrados
+    generateAlarmTypeChart();
+    generateDailyChart();
+    generateBarChart();
+    generateHourlyChart();
 }
 
 function clearFilters() {
@@ -603,6 +636,7 @@ function clearFilters() {
     
     filteredVideos = [...currentData.videos];
     updateTable();
+    updateChartsWithFilters();
 }
 
 function updateStatsBar() {
@@ -670,196 +704,235 @@ function exportToExcel() {
 function exportToPDF() {
     showExportModal();
     
-    // Usar html2canvas para capturar solo los gráficos
-    // Nota: Esta función requiere html2canvas, lo agregaremos dinámicamente
+    // Verificar si jsPDF está disponible
+    if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined') {
+        console.error('jsPDF no está disponible');
+        alert('Error: La biblioteca jsPDF no está cargada correctamente. Por favor, recarga la página e intenta nuevamente.');
+        hideExportModal();
+        return;
+    }
+    
+    // Usar el método híbrido que captura la visualización completa
+    exportToPDFHybrid();
+}
+
+function exportToPDFHybrid() {
+    // Verificar si html2canvas está disponible
     if (typeof html2canvas === 'undefined') {
         // Cargar html2canvas dinámicamente si no está disponible
         const script = document.createElement('script');
         script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
         script.onload = function() {
-            exportToPDFHybrid();
+            captureDashboardToPDF();
         };
         document.head.appendChild(script);
     } else {
-        exportToPDFHybrid();
-    }
-}
-
-function exportToPDFHybrid() {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    
-    // Configuración de la página
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 20;
-    
-    let yPosition = margin;
-    
-    // Agregar título y fecha
-    doc.setFontSize(20);
-    doc.setTextColor(21, 101, 192);
-    doc.text('Reporte de Alarmas en Conducción', margin, yPosition);
-    yPosition += 15;
-    
-    doc.setFontSize(12);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`Fecha: ${new Date().toLocaleDateString('es-ES')}`, margin, yPosition);
-    yPosition += 8;
-    doc.text(`Hora: ${new Date().toLocaleTimeString('es-ES')}`, margin, yPosition);
-    yPosition += 8;
-    doc.text(`Archivo: ${currentData.fileName}`, margin, yPosition);
-    yPosition += 15;
-    
-    // Agregar título dinámico como texto
-    const reportTitleElement = document.getElementById('reportTitle');
-    if (reportTitleElement) {
-        doc.setFontSize(16);
-        doc.setTextColor(33, 33, 33);
-        const titleText = reportTitleElement.textContent;
-        const lines = doc.splitTextToSize(titleText, pageWidth - 2 * margin);
-        doc.text(lines, margin, yPosition);
-        yPosition += lines.length * 8 + 10;
+        captureDashboardToPDF();
     }
     
-    // Agregar métricas como texto
-    doc.setFontSize(14);
-    doc.setTextColor(21, 101, 192);
-    doc.text('Resumen General', margin, yPosition);
-    yPosition += 10;
-    
-    const patentes = [...new Set(currentData.videos.map(v => v.vehiculo).filter(v => v))];
-    const patenteTexto = patentes.length === 1 ? patentes[0] : `${patentes.length} vehículos`;
-    
-    doc.setFontSize(11);
-    doc.setTextColor(50, 50, 50);
-    doc.text(`• Total de Alarmas: ${currentData.videos.length}`, margin + 5, yPosition);
-    yPosition += 7;
-    doc.text(`• Tipos de Alarma: ${Object.keys(currentData.summary).length}`, margin + 5, yPosition);
-    yPosition += 7;
-    doc.text(`• Vehículo(s): ${patenteTexto}`, margin + 5, yPosition);
-    yPosition += 7;
-    doc.text(`• Archivo Procesado: ${currentData.fileName}`, margin + 5, yPosition);
-    yPosition += 15;
-    
-    // Capturar gráficos como imágenes
-    const chartContainers = document.querySelectorAll('.chart-container');
-    const chartPromises = Array.from(chartContainers).map((container, index) => {
-        return new Promise((resolve) => {
-            // Obtener el título del gráfico
-            const titleElement = container.querySelector('h3');
-            const title = titleElement ? titleElement.textContent : `Gráfico ${index + 1}`;
+    function captureDashboardToPDF() {
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        
+        // Configuración de la página
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const margin = 15;
+        
+        // Cargar logo para agregarlo a cada página
+        const logoImg = new Image();
+        logoImg.onload = function() {
+            // Función para agregar logo a una página específica
+            function addLogoToPage(pageNumber) {
+                if (pageNumber > 0) {
+                    pdf.setPage(pageNumber);
+                    const logoWidth = 25;
+                    const logoHeight = (logoImg.height * logoWidth) / logoImg.width;
+                    pdf.addImage(logoImg, 'PNG', margin, margin, logoWidth, logoHeight);
+                }
+            }
             
-            // Capturar solo el canvas del gráfico
-            const canvas = container.querySelector('canvas');
-            if (canvas) {
-                html2canvas(canvas, {
-                    scale: 2,  // Calidad buena pero no excesiva
+            // Función para agregar pie de página a una página específica
+            function addFooterToPage(pageNumber) {
+                if (pageNumber > 0) {
+                    pdf.setPage(pageNumber);
+                    pdf.setFontSize(8);
+                    pdf.setTextColor(150, 150, 150);
+                    const footerText = `Generado por West Fleet Solutions - Página ${pageNumber}`;
+                    pdf.text(footerText, pageWidth - margin, pageHeight - 10, { align: 'right' });
+                }
+            }
+            
+            // Capturar diferentes secciones del dashboard por separado
+            const dashboardElement = document.getElementById('dashboard');
+            const sections = [
+                { element: document.querySelector('#reportTitle'), name: 'Título' },
+                { element: document.querySelector('.metrics-grid'), name: 'Métricas' },
+                { element: document.querySelector('.filters'), name: 'Filtros' },
+                { element: document.querySelector('.charts-grid'), name: 'Gráficos' },
+                { element: document.querySelector('.table-container'), name: 'Tabla' }
+            ];
+            
+            let currentPage = 1;
+            let yPosition = margin + 30; // Espacio para el logo
+            
+            // Agregar logo a la primera página
+            addLogoToPage(currentPage);
+            
+            // Procesar cada sección
+            const sectionPromises = sections.map((section, index) => {
+                return new Promise((resolve) => {
+                    if (!section.element) {
+                        resolve();
+                        return;
+                    }
+                    
+                    html2canvas(section.element, {
+                        scale: 1.5,  // Calidad moderada para reducir tamaño
+                        useCORS: true,
+                        backgroundColor: '#ffffff',
+                        logging: false,
+                        width: section.element.scrollWidth,
+                        height: section.element.scrollHeight
+                    }).then(canvas => {
+                        const imgData = canvas.toDataURL('image/jpeg', 0.7); // JPEG con compresión
+                        
+                        const maxWidth = pageWidth - 2 * margin;
+                        const imgHeight = (canvas.height * maxWidth) / canvas.width;
+                        
+                        // Verificar si necesitamos una nueva página
+                        if (yPosition + imgHeight > pageHeight - margin - 20) {
+                            currentPage++;
+                            pdf.addPage();
+                            addLogoToPage(currentPage);
+                            yPosition = margin + 30;
+                        }
+                        
+                        // Agregar la sección
+                        pdf.addImage(imgData, 'JPEG', margin, yPosition, maxWidth, imgHeight);
+                        yPosition += imgHeight + 10;
+                        
+                        resolve();
+                    }).catch(() => {
+                        resolve();
+                    });
+                });
+            });
+            
+            // Esperar a que todas las secciones se procesen
+            Promise.all(sectionPromises).then(() => {
+                // Agregar pie de página a todas las páginas
+                for (let i = 1; i <= currentPage; i++) {
+                    addFooterToPage(i);
+                }
+                
+                // Obtener patente única o mostrar múltiples si hay varias
+                const patentes = [...new Set(currentData.videos.map(v => v.vehiculo).filter(v => v))];
+                const patenteTexto = patentes.length === 1 ? patentes[0].replace(/[^a-zA-Z0-9]/g, '_') : 'Multiples_Vehiculos';
+                
+                // Descargar PDF
+                pdf.save(`Reporte_${patenteTexto}_${new Date().toISOString().split('T')[0]}.pdf`);
+                hideExportModal();
+            }).catch(error => {
+                console.error('Error al generar PDF:', error);
+                alert('Error al generar el PDF. Por favor, intenta nuevamente.');
+                hideExportModal();
+            });
+        };
+        
+        logoImg.onerror = function() {
+            console.warn('No se pudo cargar el logo. Continuando sin logo.');
+            // Si no se puede cargar el logo, generar PDF sin él
+            generatePDFWithoutLogo();
+        };
+        
+        logoImg.src = 'west_logo.png';
+    }
+    
+    function generatePDFWithoutLogo() {
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        
+        // Configuración de la página
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const margin = 15;
+        
+        // Capturar diferentes secciones del dashboard por separado
+        const sections = [
+            { element: document.querySelector('#reportTitle'), name: 'Título' },
+            { element: document.querySelector('.metrics-grid'), name: 'Métricas' },
+            { element: document.querySelector('.filters'), name: 'Filtros' },
+            { element: document.querySelector('.charts-grid'), name: 'Gráficos' },
+            { element: document.querySelector('.table-container'), name: 'Tabla' }
+        ];
+        
+        let currentPage = 1;
+        let yPosition = margin;
+        
+        // Procesar cada sección
+        const sectionPromises = sections.map((section, index) => {
+            return new Promise((resolve) => {
+                if (!section.element) {
+                    resolve();
+                    return;
+                }
+                
+                html2canvas(section.element, {
+                    scale: 1.5,  // Calidad moderada para reducir tamaño
                     useCORS: true,
                     backgroundColor: '#ffffff',
-                    logging: false
+                    logging: false,
+                    width: section.element.scrollWidth,
+                    height: section.element.scrollHeight
                 }).then(canvas => {
-                    const imgData = canvas.toDataURL('image/png', 0.9);  // Buena calidad pero compresión
-                    resolve({ title, imgData, width: canvas.width, height: canvas.height });
+                    const imgData = canvas.toDataURL('image/jpeg', 0.7); // JPEG con compresión
+                    
+                    const maxWidth = pageWidth - 2 * margin;
+                    const imgHeight = (canvas.height * maxWidth) / canvas.width;
+                    
+                    // Verificar si necesitamos una nueva página
+                    if (yPosition + imgHeight > pageHeight - margin - 20) {
+                        currentPage++;
+                        pdf.addPage();
+                        yPosition = margin;
+                    }
+                    
+                    // Agregar la sección
+                    pdf.addImage(imgData, 'JPEG', margin, yPosition, maxWidth, imgHeight);
+                    yPosition += imgHeight + 10;
+                    
+                    resolve();
                 }).catch(() => {
-                    resolve({ title, imgData: null, width: 0, height: 0 });
+                    resolve();
                 });
-            } else {
-                resolve({ title, imgData: null, width: 0, height: 0 });
-            }
+            });
         });
-    });
-    
-    // Esperar a que todos los gráficos se capturen
-    Promise.all(chartPromises).then(charts => {
-        charts.forEach(chart => {
-            // Verificar si necesitamos una nueva página
-            if (yPosition + 80 > pageHeight - margin) {
-                doc.addPage();
-                yPosition = margin;
+        
+        // Esperar a que todas las secciones se procesen
+        Promise.all(sectionPromises).then(() => {
+            // Agregar pie de página a todas las páginas
+            for (let i = 1; i <= currentPage; i++) {
+                pdf.setPage(i);
+                pdf.setFontSize(8);
+                pdf.setTextColor(150, 150, 150);
+                const footerText = `Generado por West Fleet Solutions - Página ${i}`;
+                pdf.text(footerText, pageWidth - margin, pageHeight - 10, { align: 'right' });
             }
             
-            // Agregar título del gráfico como texto
-            doc.setFontSize(12);
-            doc.setTextColor(21, 101, 192);
-            doc.text(chart.title, margin, yPosition);
-            yPosition += 10;
+            // Obtener patente única o mostrar múltiples si hay varias
+            const patentes = [...new Set(currentData.videos.map(v => v.vehiculo).filter(v => v))];
+            const patenteTexto = patentes.length === 1 ? patentes[0].replace(/[^a-zA-Z0-9]/g, '_') : 'Multiples_Vehiculos';
             
-            // Agregar imagen del gráfico si existe
-            if (chart.imgData) {
-                const imgWidth = pageWidth - 2 * margin;
-                const imgHeight = (chart.height * imgWidth) / chart.width;
-                
-                // Limitar la altura máxima de la imagen
-                const maxHeight = 120;
-                const finalHeight = Math.min(imgHeight, maxHeight);
-                const finalWidth = (finalHeight * chart.width) / chart.height;
-                
-                // Centrar la imagen
-                const xPos = (pageWidth - finalWidth) / 2;
-                
-                doc.addImage(chart.imgData, 'PNG', xPos, yPosition, finalWidth, finalHeight);
-                yPosition += finalHeight + 15;
-            } else {
-                yPosition += 20;
-            }
+            // Descargar PDF
+            pdf.save(`Reporte_${patenteTexto}_${new Date().toISOString().split('T')[0]}.pdf`);
+            hideExportModal();
+        }).catch(error => {
+            console.error('Error al generar PDF:', error);
+            alert('Error al generar el PDF. Por favor, intenta nuevamente.');
+            hideExportModal();
         });
-        
-        // Agregar resumen de alarmas como texto
-        if (yPosition + 50 > pageHeight - margin) {
-            doc.addPage();
-            yPosition = margin;
-        }
-        
-        doc.setFontSize(14);
-        doc.setTextColor(21, 101, 192);
-        doc.text('Detalle de Alarmas por Tipo', margin, yPosition);
-        yPosition += 10;
-        
-        doc.setFontSize(10);
-        doc.setTextColor(50, 50, 50);
-        Object.entries(currentData.summary).forEach(([tipo, cantidad]) => {
-            if (yPosition + 7 > pageHeight - margin) {
-                doc.addPage();
-                yPosition = margin;
-            }
-            doc.text(`• ${tipo}: ${cantidad}`, margin + 5, yPosition);
-            yPosition += 7;
-        });
-        
-        // Agregar estadísticas adicionales
-        if (yPosition + 30 > pageHeight - margin) {
-            doc.addPage();
-            yPosition = margin;
-        }
-        
-        yPosition += 10;
-        doc.setFontSize(12);
-        doc.setTextColor(21, 101, 192);
-        doc.text('Estadísticas Adicionales', margin, yPosition);
-        yPosition += 10;
-        
-        doc.setFontSize(10);
-        doc.setTextColor(50, 50, 50);
-        doc.text(`Total de eventos registrados: ${currentData.videos.length}`, margin + 5, yPosition);
-        yPosition += 7;
-        doc.text(`Vehículos monitoreados: ${patentes.length}`, margin + 5, yPosition);
-        yPosition += 7;
-        doc.text(`Tipos de alarma detectados: ${Object.keys(currentData.summary).length}`, margin + 5, yPosition);
-        
-        // Obtener patente única o mostrar múltiples si hay varias
-        const patentesFinal = [...new Set(currentData.videos.map(v => v.vehiculo).filter(v => v))];
-        const patenteTextoFinal = patentesFinal.length === 1 ? patentesFinal[0].replace(/[^a-zA-Z0-9]/g, '_') : 'Multiples_Vehiculos';
-        
-        // Descargar PDF
-        doc.save(`Reporte_${patenteTextoFinal}_${new Date().toISOString().split('T')[0]}.pdf`);
-        hideExportModal();
-    }).catch(error => {
-        console.error('Error al generar PDF híbrido:', error);
-        // Si falla el método híbrido, usar el método simple
-        exportToPDFSimple();
-        hideExportModal();
-    });
+    }
 }
 
 function exportToPDFSimple() {

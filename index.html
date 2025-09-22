@@ -721,6 +721,31 @@
                 <!-- Las métricas se generarán dinámicamente -->
             </div>
             
+            <div class="filters-section" id="mainFilters">
+                <div class="filter-group">
+                    <label>Tipo de Alarma:</label>
+                    <select id="filterType">
+                        <option value="">Todos</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Patente:</label>
+                    <select id="filterPatent">
+                        <option value="">Todas</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Fecha:</label>
+                    <input type="date" id="filterDate">
+                </div>
+                <div class="filter-group">
+                    <label>Buscar en comentarios:</label>
+                    <input type="text" id="filterComment" placeholder="Buscar...">
+                </div>
+                <button class="btn-filter" onclick="applyFilters()">Filtrar</button>
+                <button class="btn-filter btn-clear" onclick="clearFilters()">Limpiar</button>
+            </div>
+            
             <div class="charts-row">
                 <div class="chart-container">
                     <h3>Tipos de Alarmas</h3>
@@ -750,30 +775,6 @@
             
             <div class="table-container">
                 <h3>Detalle de Eventos</h3>
-                <div class="filters-section">
-                    <div class="filter-group">
-                        <label>Tipo de Alarma:</label>
-                        <select id="filterType">
-                            <option value="">Todos</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label>Patente:</label>
-                        <select id="filterPatent">
-                            <option value="">Todas</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label>Fecha:</label>
-                        <input type="date" id="filterDate">
-                    </div>
-                    <div class="filter-group">
-                        <label>Buscar en comentarios:</label>
-                        <input type="text" id="filterComment" placeholder="Buscar...">
-                    </div>
-                    <button class="btn-filter" onclick="applyFilters()">Filtrar</button>
-                    <button class="btn-filter btn-clear" onclick="clearFilters()">Limpiar</button>
-                </div>
                 <table id="eventsTable">
                     <thead>
                         <tr>
