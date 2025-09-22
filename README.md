@@ -1,9 +1,36 @@
 # 🚛 Reportes de Conducción - West Ingeniería
 
 ## Descripción
-Herramienta web profesional para generar reportes de alarmas de conducción a partir de archivos Excel. Desarrollada específicamente para West Ingeniería y la Supervisora de Mesa de Servicio, Catherine Triviño.
+Plataforma fullstack profesional para generar reportes de alarmas de conducción a partir de archivos Excel. Actualmente en migración desde una aplicación web monolítica hacia una arquitectura moderna con React + Python + Firebase.
 
-## ✨ Características Mejoradas
+**Estado Actual**: 🔄 En proceso de migración a fullstack  
+**Versión Actual**: 1.0 (Monolítica) → 2.0 (FullStack)  
+**Tecnologías**: React 18 + Python FastAPI + Firebase
+
+## 🚀 Arquitectura FullStack (En Desarrollo)
+
+### Frontend (React + TypeScript)
+- **Framework**: React 18 con Vite y TypeScript
+- **Estado**: Redux Toolkit para manejo de estado global
+- **UI**: Material-UI con diseño responsive
+- **Gráficos**: Recharts para visualizaciones interactivas
+- **Autenticación**: Firebase Authentication
+
+### Backend (Python + FastAPI)
+- **Framework**: FastAPI para API REST de alto rendimiento
+- **Procesamiento**: Pandas para análisis de datos Excel
+- **Validación**: Pydantic para validación de datos
+- **Base de datos**: Firestore para almacenamiento en tiempo real
+- **Storage**: Firebase Storage para gestión de archivos
+
+### Firebase Services
+- **Firestore**: Base de datos NoSQL escalable
+- **Authentication**: Sistema de autenticación de usuarios
+- **Storage**: Almacenamiento de archivos Excel y reportes
+- **Hosting**: Despliegue de aplicación React
+- **Functions**: Procesamiento serverless
+
+## ✨ Características Actuales (v1.0 - Monolítica)
 - **Carga intuitiva**: Arrastra y suelta archivos Excel o selección manual
 - **Análisis automático**: Procesamiento inteligente de datos de alarmas
 - **Dashboard visual**: Métricas clave con tarjetas animadas y colores diferenciados
@@ -14,6 +41,18 @@ Herramienta web profesional para generar reportes de alarmas de conducción a pa
 - **Interfaz responsive**: Diseño moderno que se adapta a diferentes pantallas
 - **Experiencia de usuario**: Animaciones suaves y retroalimentación visual
 
+## 🚀 Características Nuevas (v2.0 - FullStack)
+- **Sistema de usuarios**: Autenticación con roles y permisos
+- **Gestión de vehículos**: CRUD completo para flotas de vehículos
+- **Multiusuario**: Soporte para múltiples usuarios simultáneos
+- **Reportes programados**: Generación automática y envío por email
+- **API REST**: Integración con sistemas externos
+- **Almacenamiento en la nube**: Gestión segura de archivos
+- **Panel de administración**: Gestión centralizada de usuarios y vehículos
+- **Aplicación móvil**: Versión móvil nativa (React Native)
+- **Análisis predictivo**: Detección de patrones y tendencias
+- **Soporte multi-empresa**: Gestión de múltiples empresas
+
 ## Requisitos
 - Navegador web moderno (Chrome, Firefox, Edge, Safari)
 - Archivos Excel con el formato proporcionado por el sistema de monitoreo
@@ -21,8 +60,11 @@ Herramienta web profesional para generar reportes de alarmas de conducción a pa
 ## Uso Rápido
 
 ### 1. Abrir la aplicación
+- Entrar a la web
+
+<!-->
 - Hacer doble clic en el archivo `index.html`
-- Se abrirá en el navegador predeterminado
+- Se abrirá en el navegador predeterminado <-->
 
 ### 2. Cargar archivo Excel
 - Arrastrar el archivo Excel al área designada
@@ -98,17 +140,23 @@ La aplicación espera archivos Excel con dos hojas:
 - **Cloud SQL**: Base de datos para reportes
 - **Cloud Run**: Despliegue de la aplicación
 
+### Opción 4: Google Firebase (Implementación elegida y definitiva)
+- **Firestore**: Base de datos para reportes
+- **Hosting**: Para desplegar la aplicación
+- **Functions**: Para procesamiento de datos (backend)
+- **Storage**: Para almacenamiento de archivos
+
 ## 🎨 Personalización y Diseño
 
 ### Esquema de Colores
 La aplicación utiliza una paleta profesional con gradientes:
-- **Azul**: #3498db → #2980b9 (métricas principales)
-- **Púrpura**: #9b59b6 → #8e44ad (tipos de alarma)
-- **Rojo**: #e74c3c → #c0392b (vehículos)
-- **Verde**: #27ae60 → #229954 (archivos)
+- **Azul**: #90dfffff → #2980b9 (métricas principales)
+- **Púrpura**: #d49bdbff → #7c3aa8ff (tipos de alarma)
+- **Rojo**: #f7ab65ff → #c0392b (vehículos)
+- **Verde**: #72d89cff → #148844ff (archivos)
 - **Etiquetas de alarma**: Colores diferenciados por tipo
 
-### Tipos de Alarmas con Códigos de Color
+### Tipos de Alarmas con Códigos de Color (Actualizar sección según colores en el código de script.js)
 - **Cinturón de seguridad**: Rojo (#e74c3c)
 - **Conductor distraído**: Naranja (#f39c12)
 - **Cruce de carril**: Púrpura (#9b59b6)
@@ -150,38 +198,123 @@ La aplicación utiliza una paleta profesional con gradientes:
 - **Para presentaciones**: Exportar a PDF para reportes formales
 - **Para análisis adicional**: Exportar a Excel para manipular datos en otras herramientas
 
-## 🚀 Próximas Mejoras (Versión 2.0)
+## 📊 Documentación del Proyecto
 
-### Funcionalidades
-- [ ] **Conexión real con base de datos** (Google Cloud SQL)
-- [ ] **Autenticación de usuarios** con roles y permisos
-- [ ] **Historial de reportes** con búsqueda y recuperación
-- [ ] **Filtros avanzados** por rangos de fechas y severidad
-- [ ] **Reportes programados** y envío automático por correo
-- [ ] **Panel de administración** para gestión de usuarios
-- [ ] **Múltiples idiomas** (inglés, portugués, español)
+### 📋 Plan de Migración
+- **[PLAN_MIGRACION.md](PLAN_MIGRACION.md)**: Plan detallado de migración a fullstack con fases, tecnologías y arquitectura
+- **[PRD.md](PRD.md)**: Product Requirements Document con historias de usuario y requisitos funcionales
 
-### Mejoras Técnicas
-- [ ] **Optimización de rendimiento** para grandes volúmenes de datos
-- [ ] **Carga progresiva** de datos para mejor experiencia
-- [ ] **Almacenamiento local** de configuraciones
-- [ ] **Exportación a más formatos** (CSV, JSON, imágenes)
-- [ ] **API REST** para integración con otros sistemas
+### 🔄 Estado de la Migración
+- **Fase Actual**: Planificación y diseño
+- **Próximos Pasos**: Configuración del entorno Firebase
+- **Timeline Estimado**: 2 semanas para MVP, 5 semanas para versión completa
 
-### Mejoras de Diseño
-- [ ] **Modo oscuro/claro** para mejor visibilidad
-- [ ] **Diseño totalmente responsive** para móviles
-- [ ] **Gráficos más interactivos** con drill-down
-- [ ] **Vista de mapa** para ubicación de eventos
-- [ ] **Dashboard personalizable** por usuario
+## 🚀 Roadmap de Implementación (Timeline Acelerado)
 
-## Notas para el Desarrollador
-- El MVP está diseñado para ser funcional inmediatamente
-- No requiere instalación de dependencias adicionales
-- La lógica de base de datos está simulada por ahora
-- Todos los archivos son autocontenidos en una sola carpeta
+### Fase 1: Configuración del Entorno (Días 1-2)
+- [ ] Crear proyecto Firebase
+- [ ] Configurar Firestore, Authentication, Storage
+- [ ] Configurar dominio personalizado
+- [ ] Crear estructura de carpetas del proyecto
+
+### Fase 2: Backend - API Python (Días 3-5)
+- [ ] Configurar entorno virtual Python
+- [ ] Implementar estructura básica de API con FastAPI
+- [ ] Crear endpoints para procesamiento de Excel
+- [ ] Implementar conexión con Firestore
+
+### Fase 3: Frontend - React (Días 6-8)
+- [ ] Configurar proyecto React con Vite
+- [ ] Migrar componentes visuales principales
+- [ ] Implementar sistema de rutas y estado
+- [ ] Migrar lógica de procesamiento de Excel
+
+### Fase 4: Integración Firebase (Días 9-10)
+- [ ] Implementar autenticación de usuarios
+- [ ] Conectar frontend con API Python
+- [ ] Implementar almacenamiento de archivos
+- [ ] Configurar reglas de seguridad
+
+### Fase 5: Testing y Despliegue (Días 11-14)
+- [ ] Crear suite de tests
+- [ ] Optimizar rendimiento
+- [ ] Configurar Firebase Hosting
+- [ ] Realizar despliegue en producción
+
+## 🛠️ Tecnologías Clave
+
+### Frontend
+- **React 18**: Framework principal con TypeScript
+- **Redux Toolkit**: Manejo de estado global
+- **Material-UI**: Componentes de UI profesionales
+- **Recharts**: Gráficos interactivos y visualizaciones
+- **Vite**: Herramienta de build y desarrollo rápido
+
+### Backend
+- **Python 3.11+**: Lenguaje principal
+- **FastAPI**: Framework web de alto rendimiento
+- **Pandas**: Procesamiento y análisis de datos
+- **Pydantic**: Validación de datos con tipos
+- **Firebase Admin SDK**: Integración con servicios Firebase
+
+### Firebase
+- **Firestore**: Base de datos NoSQL en tiempo real
+- **Authentication**: Sistema de autenticación completo
+- **Storage**: Almacenamiento de archivos escalable
+- **Hosting**: Despliegue de aplicaciones web estáticas
+- **Functions**: Ejecución de código serverless
+
+## 📈 Métricas de Éxito
+
+### Técnicas
+- Tiempo de procesamiento de archivos Excel < 10 segundos
+- Tiempo de respuesta de API < 200ms
+- Tiempo de carga de página inicial < 3 segundos
+- Soporte para archivos Excel hasta 50MB
+- 99.9% uptime del sistema
+
+### de Usuario
+- Reducción del 50% en tiempo de generación de reportes
+- Mejora del 80% en experiencia de usuario
+- Soporte para múltiples usuarios simultáneos
+- Acceso móvil responsivo
+- Disponibilidad 24/7
+
+## 🤝 Contribución
+
+### Estructura del Proyecto
+```
+reportes-conduccion-fullstack/
+├── frontend/          # Aplicación React
+├── backend/           # API Python FastAPI
+├── firebase/          # Configuración Firebase
+├── docs/              # Documentación
+└── README.md
+```
+
+### Guías de Desarrollo
+1. Clonar el repositorio
+2. Configurar Firebase CLI
+3. Instalar dependencias del frontend y backend
+4. Configurar variables de entorno
+5. Ejecutar en modo desarrollo
+
+## 📞 Soporte y Contacto
+
+### Soporte Técnico
+- **Documentación**: Revisar archivos `PLAN_MIGRACION.md` y `PRD.md`
+- **Issues**: Reportar problemas en el repositorio
+- **Email**: admin@ninfasolutions.com
+
+### Contacto del Proyecto
+- **Empresa**: West Ingeniería
+- **Supervisora**: Catherine Triviño
+- **Desarrollo**: Ninfa Solutions
+- **Última Actualización**: 22 de septiembre de 2025
 
 ---
 
-**Desarrollado para West Ingeniería**  
-*Fecha: 17 de septiembre de 2025*
+**Estado del Proyecto**: 🔄 En migración a fullstack  
+**Versión Actual**: 1.0 (Monolítica) → 2.0 (FullStack)  
+**Tecnologías**: React 18 + Python FastAPI + Firebase  
+**Fecha de Actualización**: 22 de septiembre de 2025
