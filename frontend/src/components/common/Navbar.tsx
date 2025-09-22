@@ -9,6 +9,8 @@ import {
   Menu,
   MenuItem,
   Avatar,
+  Chip,
+  Badge,
 } from '@mui/material'
 import {
   Menu as MenuIcon,
@@ -16,6 +18,9 @@ import {
   Description as ReportsIcon,
   AdminPanelSettings as AdminIcon,
   Logout as LogoutIcon,
+  Notifications as NotificationsIcon,
+  Settings as SettingsIcon,
+  Business as BusinessIcon,
 } from '@mui/icons-material'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth.ts'
@@ -107,34 +112,67 @@ const Navbar: React.FC = () => {
 
   return (
     <Box sx={{ flexGrow: 1 }}>
-      <AppBar position="static">
-        <Toolbar>
+      <AppBar position="static" elevation={0}>
+        <Toolbar sx={{ minHeight: 64 }}>
+          {/* Logo y Brand */}
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              cursor: 'pointer',
+              mr: 3,
+            }}
+            onClick={() => navigate('/')}
+          >
+            <BusinessIcon sx={{ fontSize: 28, mr: 1, color: 'white' }} />
+            <Typography
+              variant="h5"
+              noWrap
+              sx={{
+                fontWeight: 600,
+                letterSpacing: '0.5px',
+                background: 'linear-gradient(45deg, #fff, #e3f2fd)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
+            >
+              West Ingeniería
+            </Typography>
+          </Box>
+
+          {/* Mobile Menu */}
           <IconButton
             size="large"
             edge="start"
             color="inherit"
             aria-label="open drawer"
-            sx={{ mr: 2 }}
+            sx={{ 
+              display: { md: 'none' },
+              mr: 1,
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              },
+            }}
             onClick={(e) => setMobileMenuAnchor(e.currentTarget)}
           >
             <MenuIcon />
           </IconButton>
-          <Typography
-            variant="h6"
-            noWrap
-            component="div"
-            sx={{ display: { xs: 'none', sm: 'block' }, cursor: 'pointer' }}
-            onClick={() => navigate('/')}
-          >
-            🚛 West Reportes
-          </Typography>
-          <Box sx={{ flexGrow: 1 }} />
-          <Box sx={{ display: { xs: 'none', md: 'flex' } }}>
+
+          {/* Desktop Navigation */}
+          <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>
             <Button
               color="inherit"
               startIcon={<DashboardIcon />}
               onClick={() => navigate('/')}
-              sx={{ mr: 1 }}
+              sx={{
+                mr: 1,
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 500,
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                },
+              }}
             >
               Dashboard
             </Button>
@@ -142,7 +180,15 @@ const Navbar: React.FC = () => {
               color="inherit"
               startIcon={<ReportsIcon />}
               onClick={() => navigate('/reports')}
-              sx={{ mr: 1 }}
+              sx={{
+                mr: 1,
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 500,
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                },
+              }}
             >
               Reportes
             </Button>
@@ -150,15 +196,61 @@ const Navbar: React.FC = () => {
               color="inherit"
               startIcon={<AdminIcon />}
               onClick={() => navigate('/admin')}
-              sx={{ mr: 2 }}
+              sx={{
+                mr: 2,
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 500,
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                },
+              }}
             >
               Admin
             </Button>
           </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Typography variant="body2" sx={{ mr: 2 }}>
-              {user?.name || 'Usuario Demo'}
-            </Typography>
+
+          {/* User Section */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            {/* Notification Icon */}
+            <IconButton
+              size="large"
+              color="inherit"
+              sx={{
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                },
+              }}
+            >
+              <Badge badgeContent={4} color="error">
+                <NotificationsIcon />
+              </Badge>
+            </IconButton>
+
+            {/* User Info */}
+            <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center', gap: 1 }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  fontWeight: 500,
+                  color: 'rgba(255, 255, 255, 0.9)',
+                }}
+              >
+                {user?.name || 'Usuario Demo'}
+              </Typography>
+              <Chip
+                label={user?.role || 'User'}
+                size="small"
+                sx={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                  color: 'white',
+                  fontWeight: 500,
+                  fontSize: '0.75rem',
+                }}
+              />
+            </Box>
+
+            {/* Profile Avatar */}
             <IconButton
               size="large"
               edge="end"
@@ -167,8 +259,22 @@ const Navbar: React.FC = () => {
               aria-haspopup="true"
               onClick={handleProfileMenuOpen}
               color="inherit"
+              sx={{
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                },
+              }}
             >
-              <Avatar sx={{ width: 32, height: 32 }}>
+              <Avatar
+                sx={{
+                  width: 36,
+                  height: 36,
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                  color: 'white',
+                  fontWeight: 600,
+                  fontSize: '1rem',
+                }}
+              >
                 {user?.name?.charAt(0).toUpperCase() || 'U'}
               </Avatar>
             </IconButton>

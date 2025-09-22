@@ -43,7 +43,7 @@ class ExcelService:
             
             # Save to Firestore
             doc_ref = self.db.collection('reports').document(doc_id)
-            await doc_ref.set(report_dict)
+            doc_ref.set(report_dict)
             
             return doc_id
         except Exception as e:

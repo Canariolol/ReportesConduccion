@@ -1,6 +1,7 @@
 import pandas as pd
 from typing import List, Dict, Any, Tuple
 import re
+import unicodedata
 from datetime import datetime
 from ..models.excel import ExcelData, ExcelSummary, AlarmEvent, ProcessedReport, ChartData
 
@@ -45,15 +46,45 @@ class ExcelParser:
         """Parse summary sheet data"""
         summary = []
         
-        for i in range(2, len(df)):
+        # Find the header row first
+        header_row = None
+        for i in range(len(df)):
             row = df.iloc[i]
-            if pd.notna(row[0]) and pd.notna(row[1]):
-                tipo = str(row[0]).strip()
-                cantidad = int(row[1]) if pd.notna(row[1]) else 0
+            row_str = ' '.join([str(cell) for cell in row if pd.notna(cell)])
+            if any(keyword in row_str.lower() for keyword in ['tipo', 'alarma', 'eventos']):
+                header_row = i
+                break
+        
+        if header_row is None:
+            # If no header found, start from row 2
+            header_row = 2
+        
+        # Start parsing from the row after header
+        start_row = header_row + 1
+        
+        for i in range(start_row, len(df)):
+            row = df.iloc[i]
+            
+            # Skip empty rows
+            if pd.isna(row[0]) and pd.isna(row[1]):
+                continue
                 
-                # Skip empty rows and totals
-                if tipo and not tipo.lower().startswith('total') and tipo != '(en blanco)':
-                    summary.append(ExcelSummary(tipo=tipo, cantidad=cantidad))
+            tipo = str(row[0]).strip() if pd.notna(row[0]) else ''
+            
+            # Try to convert quantity to int, if fails skip this row
+            try:
+                cantidad = int(row[1]) if pd.notna(row[1]) and str(row[1]).strip() else 0
+            except (ValueError, TypeError):
+                # Skip rows where quantity is not a valid number
+                continue
+                
+            # Skip empty rows and totals
+            if (tipo and 
+                not tipo.lower().startswith('total') and 
+                tipo != '(en blanco)' and
+                tipo.lower() != 'cuenta de tipo' and
+                not tipo.lower().startswith('subtotal')):
+                summary.append(ExcelSummary(tipo=tipo, cantidad=cantidad))
         
         return summary
     
@@ -79,8 +110,8 @@ class ExcelParser:
                 )
                 
                 # Separate videos solicitados from other events
-                if (event.tipo.lower().includes('video solicitado') or 
-                    event.tipo.lower().includes('vídeo solicitado')):
+                if ('video solicitado' in event.tipo.lower() or 
+                    'vídeo solicitado' in event.tipo.lower()):
                     videos_solicitados.append(event)
                 else:
                     videos.append(event)
@@ -170,7 +201,7 @@ class ExcelParser:
         # Alarm type distribution
         alarm_counts = {}
         for event in excel_data.videos:
-            if event.tipo and not event.tipo.lower().includes('video solicitado'):
+            if event.tipo and 'video solicitado' not in event.tipo.lower():
                 alarm_counts[event.tipo] = alarm_counts.get(event.tipo, 0) + 1
         
         alarm_labels = list(alarm_counts.keys())
@@ -227,7 +258,9 @@ class ExcelParser:
     
     def _get_alarm_color(self, alarm_type: str) -> str:
         """Get color for alarm type"""
-        normalized = alarm_type.lower().normalize('NFD').replace(r'[\u0300-\u036f]', '', regex=True)
+        # Normalize string: remove accents and convert to lowercase
+        normalized = unicodedata.normalize('NFD', alarm_type.lower())
+        normalized = re.sub(r'[\u0300-\u036f]', '', normalized)
         
         for key, color in self.alarm_colors.items():
             if key in normalized:
