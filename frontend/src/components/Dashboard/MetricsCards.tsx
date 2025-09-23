@@ -1,23 +1,28 @@
 import React from 'react'
 import { Grid, Card, CardContent, Typography, Box } from '@mui/material'
-import { Warning, Analytics, Speed, Assessment } from '@mui/icons-material'
+import { Warning, Analytics, Speed, Assessment, VideoLibrary } from '@mui/icons-material'
 
 interface MetricsCardsProps {
   totalAlarms: number
   alarmTypesCount: number
   vehiclePlate: string
   fileName: string
+  videosRequested?: number
 }
 
 const MetricsCards: React.FC<MetricsCardsProps> = ({
   totalAlarms,
   alarmTypesCount,
   vehiclePlate,
-  fileName
+  fileName,
+  videosRequested
 }) => {
+  // Siempre 4 tarjetas, sin condicionales
+  const cardWidth = 3; // md={3} para 4 tarjetas
+  
   return (
     <Grid container spacing={3} sx={{ mb: 4 }}>
-      <Grid item xs={12} sm={6} md={3}>
+      <Grid item xs={12} sm={6} md={cardWidth}>
         <Card 
           sx={{ 
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -49,7 +54,7 @@ const MetricsCards: React.FC<MetricsCardsProps> = ({
           </CardContent>
         </Card>
       </Grid>
-      <Grid item xs={12} sm={6} md={3}>
+      <Grid item xs={12} sm={6} md={cardWidth}>
         <Card 
           sx={{ 
             background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
@@ -81,7 +86,7 @@ const MetricsCards: React.FC<MetricsCardsProps> = ({
           </CardContent>
         </Card>
       </Grid>
-      <Grid item xs={12} sm={6} md={3}>
+      <Grid item xs={12} sm={6} md={cardWidth}>
         <Card 
           sx={{ 
             background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
@@ -113,7 +118,7 @@ const MetricsCards: React.FC<MetricsCardsProps> = ({
           </CardContent>
         </Card>
       </Grid>
-      <Grid item xs={12} sm={6} md={3}>
+      <Grid item xs={12} sm={6} md={cardWidth}>
         <Card 
           sx={{ 
             background: 'linear-gradient(135deg, #5ec581ff 0%, #4eb9a6ff 100%)',

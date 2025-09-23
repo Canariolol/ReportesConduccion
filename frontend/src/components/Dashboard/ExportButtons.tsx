@@ -1,81 +1,159 @@
 import React from 'react'
-import { Box, Button } from '@mui/material'
-import { GetApp, PictureAsPdf, Save } from '@mui/icons-material'
+import { Box, Button, FormControl, InputLabel, Select, MenuItem, Typography } from '@mui/material'
+import { GetApp, PictureAsPdf, Save, Business } from '@mui/icons-material'
 
 interface ExportButtonsProps {
   onExportExcel: () => void
   onExportPDF: () => void
   onSaveToDB: () => void
+  selectedCompany: string
+  availableCompanies: string[]
+  onCompanyChange: (company: string) => void
 }
 
 const ExportButtons: React.FC<ExportButtonsProps> = ({ 
   onExportExcel, 
   onExportPDF, 
-  onSaveToDB 
+  onSaveToDB,
+  selectedCompany,
+  availableCompanies,
+  onCompanyChange
 }) => {
   return (
     <Box sx={{ 
       mb: 4, 
       display: 'flex', 
-      gap: 2,
+      flexDirection: 'column',
+      gap: 3,
       p: 3,
       bgcolor: 'background.paper',
       borderRadius: 2,
       boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
     }}>
-      <Button
-        variant="contained"
-        startIcon={<GetApp />}
-        onClick={onExportExcel}
-        sx={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          fontWeight: 600,
-          px: 3,
-          py: 1.5,
-          '&:hover': {
-            transform: 'translateY(-2px)',
-            boxShadow: '0 6px 20px rgba(102, 126, 234, 0.4)',
-          }
-        }}
-      >
-        Exportar Excel
-      </Button>
-      <Button
-        variant="contained"
-        startIcon={<PictureAsPdf />}
-        onClick={onExportPDF}
-        sx={{
-          background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-          fontWeight: 600,
-          px: 3,
-          py: 1.5,
-          '&:hover': {
-            transform: 'translateY(-2px)',
-            boxShadow: '0 6px 20px rgba(240, 147, 251, 0.4)',
-          }
-        }}
-      >
-        Exportar PDF
-      </Button>
-      <Button
-        variant="outlined"
-        startIcon={<Save />}
-        onClick={onSaveToDB}
-        sx={{
-          fontWeight: 600,
-          px: 3,
-          py: 1.5,
-          borderColor: 'primary.main',
-          color: 'primary.main',
-          '&:hover': {
-            borderColor: 'primary.dark',
-            bgcolor: 'primary.main',
-            color: 'white',
-          }
-        }}
-      >
-        Guardar en BD
-      </Button>
+      {/* Empresa y Botones */}
+      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+        {/* Selector de Empresa */}
+        <FormControl 
+          sx={{ 
+            minWidth: 200,
+            '& .MuiOutlinedInput-root': {
+              borderRadius: 2,
+              '& fieldset': {
+                borderColor: 'primary.main',
+              },
+              '&:hover fieldset': {
+                borderColor: 'primary.dark',
+              },
+            }
+          }}
+        >
+          <InputLabel 
+            id="company-select-label"
+            sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 1,
+              color: 'primary.main',
+              '&.Mui-focused': {
+                color: 'primary.dark',
+              }
+            }}
+          >
+            <Business fontSize="small" />
+            Empresa
+          </InputLabel>
+          <Select
+            labelId="company-select-label"
+            value={selectedCompany}
+            onChange={(e) => onCompanyChange(e.target.value)}
+            label="Empresa"
+          >
+            <MenuItem value="">
+              <em>Todas las empresas</em>
+            </MenuItem>
+            {availableCompanies.map((company) => (
+              <MenuItem key={company} value={company}>
+                {company}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        {/* Botones de Exportación */}
+        <Box sx={{ display: 'flex', gap: 2, ml: 'auto' }}>
+          <Button
+            variant="contained"
+            startIcon={<GetApp />}
+            onClick={onExportExcel}
+            sx={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              fontWeight: 600,
+              px: 3,
+              py: 1.5,
+              '&:hover': {
+                transform: 'translateY(-2px)',
+                boxShadow: '0 6px 20px rgba(102, 126, 234, 0.4)',
+              }
+            }}
+          >
+            Exportar Excel
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<PictureAsPdf />}
+            onClick={onExportPDF}
+            sx={{
+              background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+              fontWeight: 600,
+              px: 3,
+              py: 1.5,
+              '&:hover': {
+                transform: 'translateY(-2px)',
+                boxShadow: '0 6px 20px rgba(240, 147, 251, 0.4)',
+              }
+            }}
+          >
+            Exportar PDF
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<Save />}
+            onClick={onSaveToDB}
+            sx={{
+              fontWeight: 600,
+              px: 3,
+              py: 1.5,
+              borderColor: 'primary.main',
+              color: 'primary.main',
+              '&:hover': {
+                borderColor: 'primary.dark',
+                bgcolor: 'primary.main',
+                color: 'white',
+              }
+            }}
+          >
+            Guardar en BD
+          </Button>
+        </Box>
+      </Box>
+
+      {/* Información de exportación */}
+      {selectedCompany && (
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 1,
+          p: 2,
+          bgcolor: 'rgba(33, 150, 243, 0.1)',
+          borderRadius: 1,
+          border: '1px solid rgba(33, 150, 243, 0.3)'
+        }}>
+          <Business sx={{ color: 'primary.main', fontSize: 20 }} />
+          <Typography variant="body2" color="primary.main" sx={{ fontWeight: 500 }}>
+            Exportando para: <strong>{selectedCompany}</strong>
+          </Typography>
+        </Box>
+      )}
     </Box>
   )
 }

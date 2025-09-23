@@ -31,6 +31,43 @@ const Dashboard: React.FC = () => {
     fechaFin: '',
     comentario: '',
   })
+  
+  const [selectedCompany, setSelectedCompany] = useState<string>('')
+  const [availableCompanies, setAvailableCompanies] = useState<string[]>([])
+  
+  // Función para extraer empresas de los datos del conductor
+  const extractCompaniesFromData = () => {
+    if (!currentReport) return []
+    
+    const companies = new Set<string>()
+    const validCompanies = ['Bosque Los Lagos', 'TPF', 'Llico']
+    
+    currentReport.events.forEach(event => {
+      if (event.driver) {
+        // Buscar empresas entre paréntesis en el nombre del conductor
+        const match = event.driver.match(/\(([^)]+)\)/)
+        if (match) {
+          const company = match[1].trim()
+          if (validCompanies.includes(company)) {
+            companies.add(company)
+          }
+        }
+      }
+    })
+    
+    return Array.from(companies)
+  }
+  
+  // Actualizar empresas disponibles cuando cambie el reporte
+  React.useEffect(() => {
+    if (currentReport) {
+      const companies = extractCompaniesFromData()
+      setAvailableCompanies(companies)
+      if (companies.length > 0 && !selectedCompany) {
+        setSelectedCompany(companies[0])
+      }
+    }
+  }, [currentReport])
 
   // Refs para los gráficos
   const pieChartRef = useRef<HTMLDivElement>(null)
@@ -46,11 +83,32 @@ const Dashboard: React.FC = () => {
     if (!currentReport) return []
     
     return currentReport.events.filter(event => {
+      // Parsear el timestamp del evento
+      let eventDate: Date | null = null
+      try {
+        // Parsear el timestamp en formato "14/09/25, 11:38:35"
+        const timestampStr = event.timestamp
+        const [datePart, timePart] = timestampStr.split(', ')
+        const [day, month, year] = datePart.split('/')
+        const [hours, minutes, seconds] = timePart.split(':')
+        
+        // Crear fecha con formato correcto (añadir 2000 al año de 2 dígitos)
+        const fullYear = `20${year}`
+        eventDate = new Date(`${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hours}:${minutes}:${seconds}`)
+      } catch (error) {
+        console.error('Error parsing timestamp:', event.timestamp, error)
+        return false // Excluir eventos con fechas inválidas
+      }
+      
+      // Comparar fechas
+      const fechaInicioValida = !filters.fechaInicio || eventDate >= new Date(filters.fechaInicio)
+      const fechaFinValida = !filters.fechaFin || eventDate <= new Date(filters.fechaFin + 'T23:59:59')
+      
       return (
         (filters.tipo.length === 0 || filters.tipo.includes(event.alarmType)) &&
         (!filters.patente || event.vehiclePlate.toLowerCase().includes(filters.patente.toLowerCase())) &&
-        (!filters.fechaInicio || new Date(event.timestamp) >= new Date(filters.fechaInicio)) &&
-        (!filters.fechaFin || new Date(event.timestamp) <= new Date(filters.fechaFin)) &&
+        fechaInicioValida &&
+        fechaFinValida &&
         (!filters.comentario || (event.comments && event.comments.toLowerCase().includes(filters.comentario.toLowerCase())))
       )
     })
@@ -61,10 +119,247 @@ const Dashboard: React.FC = () => {
     
     // Importación dinámica para evitar errores de compilación
     import('xlsx').then(XLSX => {
-      const worksheet = XLSX.utils.json_to_sheet(getFilteredEvents())
+      const filteredEvents = getFilteredEvents()
       const workbook = XLSX.utils.book_new()
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Eventos Filtrados')
-      XLSX.writeFile(workbook, `reporte_filtrado_${format(new Date(), 'yyyyMMdd')}.xlsx`)
+      
+      // 1. Crear hoja de resumen con título y métricas
+      const summaryWorksheet = XLSX.utils.aoa_to_sheet([
+        // Título principal
+        ['Reporte de Alarmas de Conducción'],
+        [''],
+        // Información del reporte
+        ['Empresa:', selectedCompany || 'N/A'],
+        ['Vehículo:', currentReport.vehicle_plate],
+        ['Archivo:', currentReport.file_name],
+        ['Fecha de Exportación:', format(new Date(), 'dd/MM/yyyy HH:mm')],
+        [''],
+        // Título de la tabla de métricas
+        ['Resumen de Métricas'],
+        ['Métrica', 'Valor'],
+        ['Total de Alarmas', currentReport.summary.totalAlarms],
+        ['Tipos de Alarma', Object.keys(currentReport.summary.alarmTypes).length],
+        // Solo incluir Videos Solicitados si es mayor que 0
+        ...(currentReport.summary.videosRequested && currentReport.summary.videosRequested > 0 ? 
+          [['Vídeos Solicitados', currentReport.summary.videosRequested]] : []
+        ),
+        ['Eventos Filtrados', filteredEvents.length]
+      ])
+      
+      // Configurar anchos de columna para resumen
+      summaryWorksheet['!cols'] = [
+        { wch: 25 }, // Columna A - Métricas
+        { wch: 20 }  // Columna B - Valores
+      ]
+      
+      // Aplicar estilos a hoja de resumen
+      const summaryRange = XLSX.utils.decode_range(summaryWorksheet['!ref'] || 'A1')
+      
+      // Estilo para título principal
+      const titleStyle = {
+        font: { bold: true, sz: 16, color: { rgb: "1565C0" } },
+        alignment: { horizontal: "center" }
+      }
+      
+      // Estilo para encabezados de tabla
+      const tableHeaderStyle = {
+        font: { bold: true, color: { rgb: "FFFFFF" } },
+        fill: { fgColor: { rgb: "1565C0" } },
+        alignment: { horizontal: "center", vertical: "center" },
+        border: {
+          top: { style: "thin", color: { rgb: "000000" } },
+          bottom: { style: "thin", color: { rgb: "000000" } },
+          left: { style: "thin", color: { rgb: "000000" } },
+          right: { style: "thin", color: { rgb: "000000" } }
+        }
+      }
+      
+      // Estilo para datos de tabla
+      const tableDataStyle = {
+        font: { color: { rgb: "000000" } },
+        alignment: { horizontal: "left", vertical: "center" },
+        border: {
+          top: { style: "thin", color: { rgb: "E0E0E0" } },
+          bottom: { style: "thin", color: { rgb: "E0E0E0" } },
+          left: { style: "thin", color: { rgb: "E0E0E0" } },
+          right: { style: "thin", color: { rgb: "E0E0E0" } }
+        }
+      }
+      
+      // Estilo para etiquetas de información
+      const labelStyle = {
+        font: { bold: true, color: { rgb: "1565C0" } }
+      }
+      
+      // Aplicar estilos a celdas específicas
+      for (let row = summaryRange.s.r; row <= summaryRange.e.r; row++) {
+        for (let col = summaryRange.s.c; col <= summaryRange.e.c; col++) {
+          const cellAddress = XLSX.utils.encode_cell({ r: row, c: col })
+          if (!summaryWorksheet[cellAddress]) continue
+          
+          // Título principal (A1)
+          if (row === 0 && col === 0) {
+            summaryWorksheet[cellAddress].s = titleStyle
+          }
+          // Etiquetas de información (A4, A5, A6, A7)
+          else if ((row === 3 || row === 4 || row === 5 || row === 6) && col === 0) {
+            summaryWorksheet[cellAddress].s = labelStyle
+          }
+          // Encabezados de tabla de métricas (A9, B9)
+          else if (row === 8) {
+            summaryWorksheet[cellAddress].s = tableHeaderStyle
+          }
+          // Datos de tabla de métricas (A10 en adelante)
+          else if (row >= 9) {
+            summaryWorksheet[cellAddress].s = tableDataStyle
+          }
+        }
+      }
+      
+      // 2. Crear hoja de eventos filtrados
+      const excelData = filteredEvents.map((event, index) => {
+        // Formatear fecha para mostrar en formato normalizado
+        let formattedDate = event.timestamp
+        try {
+          const timestampStr = event.timestamp
+          const [datePart, timePart] = timestampStr.split(', ')
+          const [day, month, year] = datePart.split('/')
+          const [hours, minutes, seconds] = timePart.split(':')
+          const fullYear = `20${year}`
+          formattedDate = `${day}/${month}/${fullYear}, ${hours}:${minutes}:${seconds}`
+        } catch (error) {
+          console.error('Error formateando fecha:', event.timestamp, error)
+        }
+        
+        return {
+          '#': index + 1,
+          'Fecha y Hora': formattedDate,
+          'Patente': event.vehiclePlate,
+          'Tipo de Alarma': event.alarmType,
+          'Conductor': event.driver || 'Sin conductor',
+          'Comentarios': event.comments || 'Sin comentarios'
+        }
+      })
+      
+      const eventsWorksheet = XLSX.utils.json_to_sheet(excelData)
+      
+      // Auto-ajustar anchos de columna al contenido
+      const colWidths = [
+        Math.max(5, ...['#'].map(s => s.length)), // #
+        Math.max(20, ...excelData.map(row => row['Fecha y Hora']?.toString().length || 0)), // Fecha y Hora
+        Math.max(15, ...excelData.map(row => row['Patente']?.toString().length || 0)), // Patente
+        Math.max(25, ...excelData.map(row => row['Tipo de Alarma']?.toString().length || 0)), // Tipo de Alarma
+        Math.max(30, ...excelData.map(row => row['Conductor']?.toString().length || 0)), // Conductor
+        Math.max(40, ...excelData.map(row => row['Comentarios']?.toString().length || 0)) // Comentarios
+      ]
+      
+      eventsWorksheet['!cols'] = colWidths.map(wch => ({ wch }))
+      
+      // Aplicar estilos a hoja de eventos
+      const eventsRange = XLSX.utils.decode_range(eventsWorksheet['!ref'] || 'A1')
+      
+      // Estilo para encabezados de eventos
+      const eventsHeaderStyle = {
+        font: { bold: true, color: { rgb: "FFFFFF" } },
+        fill: { fgColor: { rgb: "1565C0" } },
+        alignment: { horizontal: "center", vertical: "center" },
+        border: {
+          top: { style: "thin", color: { rgb: "000000" } },
+          bottom: { style: "thin", color: { rgb: "000000" } },
+          left: { style: "thin", color: { rgb: "000000" } },
+          right: { style: "thin", color: { rgb: "000000" } }
+        }
+      }
+      
+      // Estilo para filas de datos de eventos
+      const eventsDataStyle = {
+        font: { color: { rgb: "000000" } },
+        alignment: { horizontal: "left", vertical: "center", wrapText: true },
+        border: {
+          top: { style: "thin", color: { rgb: "E0E0E0" } },
+          bottom: { style: "thin", color: { rgb: "E0E0E0" } },
+          left: { style: "thin", color: { rgb: "E0E0E0" } },
+          right: { style: "thin", color: { rgb: "E0E0E0" } }
+        }
+      }
+      
+      // Estilo para filas alternadas de eventos
+      const eventsAltRowStyle = {
+        font: { color: { rgb: "000000" } },
+        fill: { fgColor: { rgb: "F5F5F5" } },
+        alignment: { horizontal: "left", vertical: "center", wrapText: true },
+        border: {
+          top: { style: "thin", color: { rgb: "E0E0E0" } },
+          bottom: { style: "thin", color: { rgb: "E0E0E0" } },
+          left: { style: "thin", color: { rgb: "E0E0E0" } },
+          right: { style: "thin", color: { rgb: "E0E0E0" } }
+        }
+      }
+      
+      // Aplicar estilos a encabezados de eventos
+      for (let col = eventsRange.s.c; col <= eventsRange.e.c; col++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: eventsRange.s.r, c: col })
+        if (!eventsWorksheet[cellAddress]) continue
+        eventsWorksheet[cellAddress].s = eventsHeaderStyle
+      }
+      
+      // Aplicar estilos a filas de datos de eventos
+      for (let row = eventsRange.s.r + 1; row <= eventsRange.e.r; row++) {
+        for (let col = eventsRange.s.c; col <= eventsRange.e.c; col++) {
+          const cellAddress = XLSX.utils.encode_cell({ r: row, c: col })
+          if (!eventsWorksheet[cellAddress]) continue
+          
+          // Aplicar estilo alternado para filas pares
+          if (row % 2 === 0) {
+            eventsWorksheet[cellAddress].s = eventsAltRowStyle
+          } else {
+            eventsWorksheet[cellAddress].s = eventsDataStyle
+          }
+        }
+        
+        // Aplicar colores específicos a la columna "Tipo de Alarma" (columna D, índice 3)
+        const alarmTypeCellAddress = XLSX.utils.encode_cell({ r: row, c: 3 })
+        if (eventsWorksheet[alarmTypeCellAddress]) {
+          const alarmType = eventsWorksheet[alarmTypeCellAddress].v
+          const color = getAlarmColor(alarmType)
+          
+          // Convertir color hex a RGB para Excel
+          const hex = color.replace('#', '')
+          const r = parseInt(hex.substring(0, 2), 16)
+          const g = parseInt(hex.substring(2, 4), 16)
+          const b = parseInt(hex.substring(4, 6), 16)
+          
+          // Crear estilo especial para celdas de tipo de alarma
+          eventsWorksheet[alarmTypeCellAddress].s = {
+            font: { 
+              color: { rgb: "FFFFFF" }, // Texto blanco
+              bold: true 
+            },
+            fill: { 
+              fgColor: { rgb: `${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}` } 
+            },
+            alignment: { 
+              horizontal: "center", 
+              vertical: "center" 
+            },
+            border: {
+              top: { style: "thin", color: { rgb: "000000" } },
+              bottom: { style: "thin", color: { rgb: "000000" } },
+              left: { style: "thin", color: { rgb: "000000" } },
+              right: { style: "thin", color: { rgb: "000000" } }
+            }
+          }
+        }
+      }
+      
+      // Agregar hojas al workbook en el orden correcto
+      XLSX.utils.book_append_sheet(workbook, summaryWorksheet, 'Resumen')
+      XLSX.utils.book_append_sheet(workbook, eventsWorksheet, 'Eventos Filtrados')
+      
+      // Guardar archivo
+      const companySuffix = selectedCompany ? `_${selectedCompany.replace(/\s+/g, '_')}` : ''
+      XLSX.writeFile(workbook, `reporte_conducción_${currentReport.vehicle_plate}${companySuffix}_${format(new Date(), 'yyyyMMdd_HHmm')}.xlsx`)
+      
+      console.log(`Excel exportado exitosamente con ${filteredEvents.length} eventos`)
     }).catch(error => {
       console.error('Error al exportar a Excel:', error)
     })
@@ -104,8 +399,9 @@ const Dashboard: React.FC = () => {
             const totalPages = pdf.getNumberOfPages()
             for (let i = 1; i <= totalPages; i++) {
               pdf.setPage(i)
-              // Logo con dimensiones proporcionales para evitar deformación
-              pdf.addImage(logoBase64, 'PNG', 15, 10, 30, 12)
+              // Logo con dimensiones proporcionales para mantener proporción original
+              // Aumentado tamaño pero manteniendo relación de aspecto (generalmente los logos son más anchos que altos)
+              pdf.addImage(logoBase64, 'PNG', 6, 6, 31, 10)
             }
           }
         } catch (error) {
@@ -125,15 +421,26 @@ const Dashboard: React.FC = () => {
       
       // Función para agregar el encabezado
       const addHeader = () => {
-        pdf.setFontSize(20)
+        // Título principal centrado
+        pdf.setFontSize(22)
         pdf.setTextColor(primaryColor)
-        pdf.text('Reporte de Alarmas de Conducción', 60, 20)
+        pdf.text('Reporte de Alarmas de Conducción', pageWidth / 2, 25, { align: 'center' })
         
+        // Salto de línea y alinear a la izquierda la información
         pdf.setFontSize(12)
         pdf.setTextColor(100)
-        pdf.text(`Vehículo: ${currentReport.vehicle_plate}`, 60, 28)
-        pdf.text(`Archivo: ${currentReport.file_name}`, 60, 35)
-        pdf.text(`Fecha: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, 60, 42)
+        const infoX = 20
+        let infoY = 40
+        
+        pdf.text(`Empresa: ${selectedCompany || 'N/A'}`, infoX, infoY)
+        infoY += 8
+        pdf.text(`Vehículo: ${currentReport.vehicle_plate}`, infoX, infoY)
+        infoY += 8
+        pdf.text(`Archivo: ${currentReport.file_name}`, infoX, infoY)
+        infoY += 8
+        pdf.text(`Fecha: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, infoX, infoY)
+        
+        return infoY + 10 // Devolver la posición Y después del encabezado
       }
       
       // Función para agregar el pie de página
@@ -158,28 +465,66 @@ const Dashboard: React.FC = () => {
       
       // Función para agregar métricas
       const addMetrics = (yPosition: number) => {
+        let currentY = 75
+        // Título de la sección
+        pdf.setFontSize(18)
+        pdf.setTextColor(primaryColor)
+        pdf.text('Resumen de Métricas', 15, currentY)
+
+        pdf.setDrawColor(primaryColor)
+        pdf.setLineWidth(0.3)
+        pdf.line(15, currentY + 3, pageWidth - 15, currentY + 3)
+        
+        const tableStartY = yPosition + 10
+        const rowHeight = 8
+        const tableWidth = pageWidth - 30
+        const tableX = 15
+        
+        // Encabezados de tabla
         pdf.setFillColor(primaryColor)
-        pdf.rect(15, yPosition, pageWidth - 30, 8, 'F')
+        pdf.rect(tableX, tableStartY, tableWidth, rowHeight, 'F')
         
-        pdf.setFontSize(14)
-        pdf.setTextColor(255, 255, 255)
-        pdf.text('Resumen de Métricas', 20, yPosition + 5.5)
-        
-        const metricsY = yPosition + 15
         pdf.setFontSize(12)
+        pdf.setTextColor(255, 255, 255)
+        pdf.text('Métrica', tableX + 5, tableStartY + 5.5)
+        pdf.text('Valor', tableX + tableWidth - 25, tableStartY + 5.5)
+        
+        // Datos de la tabla
+        const metricsData = [
+          ['Total de Alarmas', currentReport.summary.totalAlarms.toString()],
+          ['Tipos de Alarma', Object.keys(currentReport.summary.alarmTypes).length.toString()],
+          // Solo incluir Videos Solicitados si es mayor que 0
+          ...(currentReport.summary.videosRequested && currentReport.summary.videosRequested > 0 ? 
+            [['Vídeos Solicitados', currentReport.summary.videosRequested.toString()]] : []
+          ),
+          ['Eventos Filtrados', filteredEvents.length.toString()]
+        ]
+        
+        pdf.setFontSize(11)
         pdf.setTextColor(0, 0, 0)
         
-        // Métricas en dos columnas
-        const col1X = 20
-        const col2X = pageWidth / 2 + 10
+        let currentRowY = tableStartY + rowHeight
         
-        pdf.text(`Total de Alarmas: ${currentReport.summary.totalAlarms}`, col1X, metricsY)
-        pdf.text(`Tipos de Alarma: ${Object.keys(currentReport.summary.alarmTypes).length}`, col2X, metricsY)
+        metricsData.forEach((row, index) => {
+          // Fila alternada
+          if (index % 2 === 0) {
+            pdf.setFillColor(245, 245, 245)
+            pdf.rect(tableX, currentRowY, tableWidth, rowHeight, 'F')
+          }
+          
+          // Borde de la fila
+          pdf.setDrawColor(200, 200, 200)
+          pdf.setLineWidth(0.1)
+          pdf.rect(tableX, currentRowY, tableWidth, rowHeight)
+          
+          // Contenido de la fila
+          pdf.text(row[0], tableX + 5, currentRowY + 5.5)
+          pdf.text(row[1], tableX + tableWidth - 25, currentRowY + 5.5)
+          
+          currentRowY += rowHeight
+        })
         
-        pdf.text(`Vídeos Solicitados: ${currentReport.summary.videosRequested || 0}`, col1X, metricsY + 8)
-        pdf.text(`Eventos Filtrados: ${filteredEvents.length}`, col2X, metricsY + 8)
-        
-        return metricsY + 20
+        return currentRowY + 10
       }
       
       // Función para agregar gráficos con proporciones correctas y espaciado adecuado
@@ -191,11 +536,17 @@ const Dashboard: React.FC = () => {
           currentY = Math.max(currentY, 35)
         }
         
-        // Título de la sección
-        pdf.setFontSize(16)
+        // Título de la sección con subrayado
+        pdf.setFontSize(18)
         pdf.setTextColor(primaryColor)
         pdf.text('Análisis Gráfico', 15, currentY)
-        currentY += 20
+        
+        // Agregar subrayado delgado a lo ancho de la página
+        pdf.setDrawColor(primaryColor)
+        pdf.setLineWidth(0.3)
+        pdf.line(15, currentY + 3, pageWidth - 15, currentY + 3)
+        
+        currentY += 15
         
         console.log('Capturando gráficos...')
         console.log('Estado de las referencias:')
@@ -216,22 +567,32 @@ const Dashboard: React.FC = () => {
         // Gráfico de torta
         if (pieChartResult.imageData) {
           console.log('Agregando gráfico de torta al PDF...')
-          pdf.setFontSize(12)
-          pdf.setTextColor(0, 0, 0)
-          pdf.text('Distribución de Tipos de Alarmas', 15, currentY)
-          currentY += 8
+          // Subtítulo destacado con fondo y borde
+          pdf.setFillColor(240, 248, 255)
+          pdf.setDrawColor(primaryColor)
+          pdf.setLineWidth(0.5)
+          pdf.rect(15, currentY, pageWidth - 30, 10, 'FD')
           
-          // Calcular dimensiones manteniendo proporción
-          const chartWidth = 120
+          pdf.setFontSize(13)
+          pdf.setTextColor(primaryColor)
+          pdf.setFont('helvetica', 'bold')
+          pdf.text('Distribución de Tipos de Alarmas', 20, currentY + 6)
+          pdf.setFont('helvetica', 'normal')
+          
+          currentY += 12
+          
+          // Calcular dimensiones manteniendo proporción - AGRANDADO
+          const chartWidth = 160  // Aumentado de 120 a 160
           const aspectRatio = pieChartResult.height / pieChartResult.width
           const chartHeight = chartWidth * aspectRatio
           
           console.log(`Dimensiones gráfico torta: ${chartWidth}x${chartHeight}`)
           console.log(`Datos de imagen: ${pieChartResult.imageData.substring(0, 50)}...`)
           
-          // Alineado a la izquierda con margen de 20mm
-          pdf.addImage(pieChartResult.imageData, 'PNG', 20, currentY, chartWidth, chartHeight)
-          currentY += chartHeight + 15
+          // Centrado horizontalmente con margen adecuado
+          const centerX = (pageWidth - chartWidth) / 2
+          pdf.addImage(pieChartResult.imageData, 'PNG', centerX, currentY, chartWidth, chartHeight)
+          currentY += chartHeight + 20  // Aumentado espacio después del gráfico
         }
         
         // Verificar si necesitamos nueva página
@@ -243,10 +604,19 @@ const Dashboard: React.FC = () => {
         // Gráfico de área
         if (areaChartResult.imageData) {
           console.log('Agregando gráfico de área al PDF...')
-          pdf.setFontSize(12)
-          pdf.setTextColor(0, 0, 0)
-          pdf.text('Evolución Diaria de Eventos', 15, currentY)
-          currentY += 8
+          // Subtítulo destacado con fondo y borde
+          pdf.setFillColor(240, 248, 255)
+          pdf.setDrawColor(primaryColor)
+          pdf.setLineWidth(0.5)
+          pdf.rect(15, currentY, pageWidth - 30, 10, 'FD')
+          
+          pdf.setFontSize(13)
+          pdf.setTextColor(primaryColor)
+          pdf.setFont('helvetica', 'bold')
+          pdf.text('Evolución Diaria de Eventos', 20, currentY + 6)
+          pdf.setFont('helvetica', 'normal')
+          
+          currentY += 12
           
           // Calcular dimensiones manteniendo proporción
           const chartWidth = 160
@@ -269,10 +639,19 @@ const Dashboard: React.FC = () => {
         // Gráfico de líneas
         if (lineChartResult.imageData) {
           console.log('Agregando gráfico de líneas al PDF...')
-          pdf.setFontSize(12)
-          pdf.setTextColor(0, 0, 0)
-          pdf.text('Alarmas por Hora del Día', 15, currentY)
-          currentY += 8
+          // Subtítulo destacado con fondo y borde
+          pdf.setFillColor(240, 248, 255)
+          pdf.setDrawColor(primaryColor)
+          pdf.setLineWidth(0.5)
+          pdf.rect(15, currentY, pageWidth - 30, 10, 'FD')
+          
+          pdf.setFontSize(13)
+          pdf.setTextColor(primaryColor)
+          pdf.setFont('helvetica', 'bold')
+          pdf.text('Alarmas por Hora del Día', 20, currentY + 6)
+          pdf.setFont('helvetica', 'normal')
+          
+          currentY += 12
           
           // Calcular dimensiones manteniendo proporción
           const chartWidth = 160
@@ -382,9 +761,9 @@ const Dashboard: React.FC = () => {
       
       // Generar el PDF
       console.log('Generando PDF...')
-      addHeader()
+      const headerEndY = addHeader()
       
-      let currentY = 55
+      let currentY = headerEndY
       
       // Agregar página 1 - Métricas
       currentY = addMetrics(currentY)
@@ -418,7 +797,8 @@ const Dashboard: React.FC = () => {
       }
       
       // Guardar el PDF
-      const fileName = `reporte_conducción_${currentReport.vehicle_plate}_${format(new Date(), 'yyyyMMdd_HHmm')}.pdf`
+      const companySuffix = selectedCompany ? `_${selectedCompany.replace(/\s+/g, '_')}` : ''
+      const fileName = `reporte_conducción_${currentReport.vehicle_plate}${companySuffix}_${format(new Date(), 'yyyyMMdd_HHmm')}.pdf`
       pdf.save(fileName)
       
       console.log(`PDF generado exitosamente con todos los ${filteredEvents.length} eventos filtrados`)
@@ -450,14 +830,11 @@ const Dashboard: React.FC = () => {
       }
     })
     
-    // Convertir a formato para el gráfico (agrupar de 2 en 2 horas)
-    return Array.from({ length: 12 }, (_, i) => {
-      const startHour = i * 2
-      const endHour = startHour + 1
-      const total = hourCounts[startHour] + (hourCounts[endHour] || 0)
+    // Convertir a formato para el gráfico (horarios fijos)
+    return Array.from({ length: 24 }, (_, i) => {
       return {
-        hour: `${startHour.toString().padStart(2, '0')}:00-${endHour.toString().padStart(2, '0')}:59`,
-        alarmas: total
+        hour: `${i.toString().padStart(2, '0')}:00`,
+        alarmas: hourCounts[i] || 0
       }
     })
   }
@@ -566,6 +943,7 @@ const Dashboard: React.FC = () => {
             alarmTypesCount={Object.keys(currentReport.summary.alarmTypes).length}
             vehiclePlate={currentReport.vehicle_plate}
             fileName={currentReport.file_name}
+            videosRequested={currentReport.summary.videosRequested}
           />
 
           {/* Charts */}
@@ -601,25 +979,33 @@ const Dashboard: React.FC = () => {
             </Grid>
           </Grid>
 
-          {/* Filters */}
-          <Filters
-            filters={filters}
-            alarmTypes={Object.keys(currentReport.summary.alarmTypes)}
-            vehiclePlate={currentReport.vehicle_plate}
-            onFilterChange={handleFilterChange}
-          />
-
-          {/* Results Summary */}
-          <ResultsSummary
-            filteredEventsCount={filteredEvents.length}
-            mostFrequentAlarm={mostFrequent ? { type: mostFrequent[0], count: mostFrequent[1] } : undefined}
-          />
+          {/* Filters and Results Summary - Side by side */}
+          <Grid container spacing={3} sx={{ mb: 3 }}>
+            <Grid item xs={12} md={6}>
+              <Filters
+                filters={filters}
+                alarmTypes={Object.keys(currentReport.summary.alarmTypes)}
+                vehiclePlate={currentReport.vehicle_plate}
+                onFilterChange={handleFilterChange}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <ResultsSummary
+                filteredEventsCount={filteredEvents.length}
+                mostFrequentAlarm={mostFrequent ? { type: mostFrequent[0], count: mostFrequent[1] } : undefined}
+                videosRequested={currentReport.summary.videosRequested}
+              />
+            </Grid>
+          </Grid>
 
           {/* Export Buttons */}
           <ExportButtons
             onExportExcel={exportToExcel}
             onExportPDF={exportToPDF}
             onSaveToDB={() => console.log('Guardar en BD')}
+            selectedCompany={selectedCompany}
+            availableCompanies={availableCompanies}
+            onCompanyChange={setSelectedCompany}
           />
 
           {/* Events Table */}

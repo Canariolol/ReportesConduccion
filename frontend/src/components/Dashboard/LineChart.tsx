@@ -33,11 +33,18 @@ const LineChartComponent = forwardRef<HTMLDivElement, LineChartProps>(({ data },
             Alarmas por Hora del Día
           </Typography>
         </Box>
-        <Box ref={internalRef} sx={{ width: '100%', height: 300 }}>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+        <Box ref={internalRef} sx={{ width: '100%', height: 350 }}>
+          <ResponsiveContainer width="100%" height={350}>
+            <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 15 }}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="hour" />
+              <XAxis 
+                dataKey="hour" 
+                tick={{ fontSize: 11, fontWeight: 500 }}
+                angle={-45}
+                textAnchor="end"
+                height={60}
+                interval={0}
+              />
               <YAxis />
               <RechartsTooltip 
                 contentStyle={{

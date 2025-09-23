@@ -55,14 +55,14 @@ export const getAlarmColor = (type: string): string => {
   const colors: Record<string, string> = {
     'cinturon': '#b71c1c',
     'distraido': '#e65100',
-    'cruce': '#6a1b9a',
+    'cruce': '#7e26b4ff',
     'distancia': '#0d47a1',
     'fatiga': '#f9a825',
-    'frenada': '#1b5e20',
+    'frenada': '#7fc079ff',
     'stop': '#424242',
-    'telefono': '#004d40',
-    'boton': '#2e7d32',
-    'video': '#8e24aa',
+    'telefono': '#398d7fff',
+    'boton': '#437a58ff',
+    'video': '#ae32b3ff',
   }
   
   const normalized = type.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -74,14 +74,40 @@ export const getAlarmColor = (type: string): string => {
 
 export const formatTimestamp = (timestamp: string): string => {
   try {
-    const eventDate = new Date(timestamp)
+    // Parsear el timestamp en formato "14/09/25, 11:38:35"
+    const timestampStr = timestamp
+    const [datePart, timePart] = timestampStr.split(', ')
+    const [day, month, year] = datePart.split('/')
+    const [hours, minutes, seconds] = timePart.split(':')
+    
+    // Crear fecha con formato correcto (añadir 2000 al año de 2 dígitos)
+    const fullYear = `20${year}`
+    const normalizedDate = `${day}/${month}/${fullYear}, ${hours}:${minutes}:${seconds}`
+    
+    // Validar que la fecha sea válida
+    const eventDate = new Date(`${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hours}:${minutes}:${seconds}`)
     if (!isNaN(eventDate.getTime())) {
-      return format(eventDate, 'dd/MM HH:mm')
+      return normalizedDate
     } else {
-      return timestamp || 'Fecha inválida'
+      // Si falla el parsing, intentar con el timestamp original
+      const originalDate = new Date(timestamp)
+      if (!isNaN(originalDate.getTime())) {
+        return format(originalDate, 'dd/MM/yyyy, HH:mm:ss')
+      } else {
+        return timestamp || 'Fecha inválida'
+      }
     }
   } catch (error) {
     console.error('Error parsing timestamp:', timestamp, error)
+    // Si hay error en el parsing, intentar con el timestamp original
+    try {
+      const eventDate = new Date(timestamp)
+      if (!isNaN(eventDate.getTime())) {
+        return format(eventDate, 'dd/MM/yyyy, HH:mm:ss')
+      }
+    } catch (secondError) {
+      console.error('Error en segundo intento de parsing:', timestamp, secondError)
+    }
     return timestamp || 'Fecha inválida'
   }
 }
