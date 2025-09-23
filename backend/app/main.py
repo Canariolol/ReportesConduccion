@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uvicorn
+import os
 from contextlib import asynccontextmanager
 
 from .core.config import settings
@@ -82,10 +83,12 @@ async def general_exception_handler(request, exc):
     )
 
 if __name__ == "__main__":
+    # Use PORT environment variable if available (for Cloud Run), otherwise default to 8000
+    port = int(os.getenv("PORT", 8000))
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=8000,
+        port=port,
         reload=True,
         log_level="info"
     )
