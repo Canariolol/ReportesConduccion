@@ -16,6 +16,6 @@ python -c "import firebase_admin; print('Firebase Admin OK')"
 
 echo.
 echo Iniciando servidor backend...
-python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 --app-dir .
 
 pause
