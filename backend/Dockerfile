@@ -27,5 +27,9 @@ USER appuser
 # Exponer el puerto que usa FastAPI (Cloud Run usa 8080)
 EXPOSE 8080
 
-# Comando para ejecutar la aplicación usando la variable de entorno PORT
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "${PORT:-8080}"]
+# Crear script de inicio para manejar variables de entorno
+RUN echo '#!/bin/sh\nexec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080}' > /app/start.sh && \
+    chmod +x /app/start.sh
+
+# Comando para ejecutar la aplicación usando el script
+CMD ["/app/start.sh"]
