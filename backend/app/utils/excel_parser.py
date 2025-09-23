@@ -24,7 +24,7 @@ class ExcelParser:
         """Parse Excel file and return structured data"""
         try:
             # Read Excel file
-            df_summary = pd.read_excel(file_content, sheet_name='Hoja1', header=None)
+            df_summary = pd.read_excel(file_content, sheet_name='Hoja1' or 'Hoja2', header=None)
             df_videos = pd.read_excel(file_content, sheet_name='Vídeos', header=None)
             
             # Parse summary data

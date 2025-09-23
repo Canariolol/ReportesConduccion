@@ -1,0 +1,115 @@
+import React, { useRef, useImperativeHandle, forwardRef } from 'react'
+import { Card, CardContent, Box, Typography } from '@mui/material'
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  Tooltip as RechartsTooltip,
+  Legend,
+} from 'recharts'
+
+interface PieChartProps {
+  data: Array<{ name: string; value: number }>
+  getAlarmColor: (type: string) => string
+}
+
+const PieChartComponent = forwardRef<HTMLDivElement, PieChartProps>(({ data, getAlarmColor }, ref) => {
+  const internalRef = useRef<HTMLDivElement>(null)
+  
+  // Exponer el ref al componente padre - manejar el caso null
+ useImperativeHandle(ref, () => internalRef.current, [])
+
+  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, name }: any) => {
+    const RADIAN = Math.PI / 180
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5
+    const x = cx + radius * Math.cos(-midAngle * RADIAN)
+    const y = cy + radius * Math.sin(-midAngle * RADIAN)
+    
+    // Si hay muchos elementos, mostrar solo el porcentaje
+    const showPercentage = data.length > 6
+    
+    return (
+      <text 
+        x={x} 
+        y={y} 
+        fill="black" 
+        textAnchor={x > cx ? 'start' : 'end'} 
+        dominantBaseline="central"
+        fontSize="12"
+        fontWeight="bold"
+      >
+        {showPercentage ? `${(percent * 100).toFixed(1)}%` : `${name}: ${(percent * 100).toFixed(1)}%`}
+      </text>
+    )
+  }
+
+  return (
+    <Card sx={{ 
+      height: 550,
+      maxWidth: 800, // Ancho máximo de 800px
+      mx: 'auto' // Centrar horizontalmente
+    }}>
+      <CardContent>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+          <Box sx={{ mr: 1, color: 'primary.main', display: 'flex', alignItems: 'center' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M11 2v20c-5.07-.5-9-4.79-9-10s3.93-9.5 9-10zm2.03 0v8.99H22c-.47-4.74-4.24-8.52-8.97-8.99zm0 11.01V22c4.74-.47 8.5-4.25 8.97-8.99h-8.97z"/>
+            </svg>
+          </Box>
+          <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main' }}>
+            Distribución de Tipos de Alarmas
+          </Typography>
+        </Box>
+        <Box ref={internalRef} sx={{ width: '100%', height: 430 }}>
+          <ResponsiveContainer width="100%" height={430}>
+            <PieChart>
+              <Pie
+                data={data}
+                cx="50%"
+                cy="50%"
+                innerRadius={40}
+                outerRadius={150}
+                paddingAngle={0}
+                dataKey="value"
+                label={renderCustomizedLabel}
+                labelLine={false}
+              >
+                {data.map((entry) => (
+                  <Cell key={entry.name} fill={getAlarmColor(entry.name)} stroke="white" strokeWidth={2} />
+                ))}
+              </Pie>
+              <RechartsTooltip 
+                contentStyle={{
+                  backgroundColor: 'rgba(255,255,255,0.95)',
+                  borderRadius: 8,
+                  border: '1px solid rgba(0,0,0,0.1)',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                }}
+              />
+              <Legend 
+                layout="vertical" 
+                verticalAlign="middle" 
+                align="right"
+                formatter={(value, entry, index) => {
+                  const alarmType = data.find(item => item.name === value)
+                  const count = alarmType ? alarmType.value : 0
+                  const percent = ((entry.payload as any).percent * 100).toFixed(1)
+                  return (
+                    <span style={{ color: getAlarmColor(value as string), fontWeight: 500 }}>
+                      {value}: {count} ({percent}%)
+                    </span>
+                  )
+                }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </Box>
+      </CardContent>
+    </Card>
+  )
+})
+
+PieChartComponent.displayName = 'PieChartComponent'
+
+export default PieChartComponent
