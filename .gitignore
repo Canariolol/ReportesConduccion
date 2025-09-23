@@ -99,3 +99,16 @@ frontend/**/*.pyc
 frontend/**/*.pyo
 frontend/**/*.pyd
 frontend/**/__pycache__/
+
+# Security - Prevent committing sensitive data
+backend/app/core/config.py
+backend/.env
+*.key
+*.pem
+*.crt
+*.p12
+*.pfx
+
+# Git history cleanup - files that should not be in git history
+backend/app/core/config.py.bak
+backend/.env.bak
