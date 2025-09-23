@@ -53,6 +53,36 @@ Plataforma fullstack profesional para generar reportes de alarmas de conducción
 - **Análisis predictivo**: Detección de patrones y tendencias
 - **Soporte multi-empresa**: Gestión de múltiples empresas
 
+## 🎯 Últimos Avances Implementados (22 de septiembre de 2025)
+
+### ✅ Corrección de Problemas Críticos en Gráficos y PDF
+- **Implementación de React.forwardRef**: Solucionado el error "Function components cannot be given refs" en todos los componentes de gráficos (PieChart, AreaChart, LineChart)
+- **Corrección de useImperativeHandle**: Manejo adecuado del tipo `HTMLDivElement | null` para evitar errores de TypeScript
+- **Captura exitosa de gráficos**: Los gráficos ahora se capturan correctamente como imágenes para incluir en el PDF
+- **Logging mejorado**: Implementación de console.log detallado para depuración del proceso de captura de gráficos
+- **PDF completo**: Los documentos PDF generados ahora incluyen todos los gráficos visuales correctamente
+
+### ✅ Optimización de Tabla de Eventos en PDF
+- **Columna conductor optimizada**: Reducida de 35mm a 30mm de ancho para mejor distribución del espacio
+- **Contenido limitado**: Implementación de truncado de texto a 15 caracteres para evitar superposición entre columnas
+- **Posicionamiento ajustado**: Columnas reubicadas para mejor espaciado y legibilidad
+- **Prevención de superposición**: Texto del conductor ya no desborda a la columna de comentarios
+- **Mostrar todos los eventos**: Eliminado el límite de 20 eventos, ahora se muestran todos los eventos filtrados en la tabla del PDF
+
+### ✅ Mejoras en Seguridad y Gestión de Configuración
+- **Protección de secret keys**: Migración de todas las credenciales hardcodeadas en config.py a variables de entorno
+- **Configuración segura**: Implementación de os.getenv() con valores por defecto para todas las variables sensibles
+- **Manejo de tipos complejos**: Conversión segura de strings a listas para configuración de CORS
+- **Archivo .env completo**: Todas las credenciales de Firebase y configuración ahora almacenadas de forma segura
+- **Actualización de .gitignore**: Reglas estrictas para prevenir commits de archivos con información sensible
+
+### ✅ Mejoras en Calidad de Código y Depuración
+- **Componentes bien estructurados**: Uso correcto de patrones de React con forwardRef y useImperativeHandle
+- **TypeScript tipado**: Manejo adecuado de tipos y nulos en todos los componentes
+- **Logging exhaustivo**: Información detallada para depuración en consola
+- **Mantenibilidad**: Código más fácil de entender y modificar
+- **Experiencia de usuario**: Documentos PDF más profesionales y bien formateados
+
 ## Requisitos
 - Navegador web moderno (Chrome, Firefox, Edge, Safari)
 - Archivos Excel con el formato proporcionado por el sistema de monitoreo
@@ -61,10 +91,6 @@ Plataforma fullstack profesional para generar reportes de alarmas de conducción
 
 ### 1. Abrir la aplicación
 - Entrar a la web
-
-<!-->
-- Hacer doble clic en el archivo `index.html`
-- Se abrirá en el navegador predeterminado <-->
 
 ### 2. Cargar archivo Excel
 - Arrastrar el archivo Excel al área designada
@@ -90,7 +116,7 @@ El dashboard mostrará:
 
 ### 4. Exportar reporte
 - **Exportar Excel**: Genera un nuevo archivo Excel con el reporte
-- **Exportar PDF**: Genera un reporte en formato PDF
+- **Exportar PDF**: Genera un reporte en formato PDF con todos los gráficos incluidos
 - **Guardar en BD**: Guarda el reporte en la base de datos (simulado por ahora)
 
 ## Estructura del Archivo Excel
@@ -114,6 +140,8 @@ La aplicación espera archivos Excel con dos hojas:
   - SheetJS (xlsx): Procesamiento de archivos Excel
   - Chart.js: Generación de gráficos
   - jsPDF: Exportación a PDF
+  - html2canvas: Captura de gráficos para PDF
+  - Recharts: Gráficos interactivos
 
 ## Despliegue
 
@@ -156,7 +184,7 @@ La aplicación utiliza una paleta profesional con gradientes:
 - **Verde**: #72d89cff → #148844ff (archivos)
 - **Etiquetas de alarma**: Colores diferenciados por tipo
 
-### Tipos de Alarmas con Códigos de Color (Actualizar sección según colores en el código de script.js)
+### Tipos de Alarmas con Códigos de Color
 - **Cinturón de seguridad**: Rojo (#e74c3c)
 - **Conductor distraído**: Naranja (#f39c12)
 - **Cruce de carril**: Púrpura (#9b59b6)
@@ -182,10 +210,11 @@ La aplicación utiliza una paleta profesional con gradientes:
 - Asegurarse de que el archivo contenga las hojas "Hoja1" y "Vídeos"
 - Revisar que el archivo no esté dañado o protegido
 
-**Los gráficos no se muestran:**
+**Los gráficos no se muestran en el PDF:**
 - Verificar la conexión a internet (se cargan librerías desde CDN)
 - Revisar la consola del navegador para errores
 - Asegurarse de que el archivo Excel tenga datos válidos
+- **SOLUCIONADO**: Implementación de forwardRef y useImperativeHandle en componentes de gráficos
 
 **Los filtros no funcionan:**
 - Verificar que se hayan cargado datos en la tabla
@@ -195,7 +224,7 @@ La aplicación utiliza una paleta profesional con gradientes:
 ### Consejos de Uso
 - **Para grandes volúmenes de datos**: Usar los filtros para navegar más fácilmente
 - **Para análisis específicos**: Combinar múltiples filtros (tipo + fecha + comentarios)
-- **Para presentaciones**: Exportar a PDF para reportes formales
+- **Para presentaciones**: Exportar a PDF para reportes formales con todos los gráficos incluidos
 - **Para análisis adicional**: Exportar a Excel para manipular datos en otras herramientas
 
 ## 📊 Documentación del Proyecto
@@ -205,37 +234,36 @@ La aplicación utiliza una paleta profesional con gradientes:
 - **[PRD.md](PRD.md)**: Product Requirements Document con historias de usuario y requisitos funcionales
 
 ### 🔄 Estado de la Migración
-- **Fase Actual**: Planificación y diseño
-- **Próximos Pasos**: Configuración del entorno Firebase
-- **Timeline Estimado**: 2 semanas para MVP, 5 semanas para versión completa
+- **Fase Actual**: Implementación de componentes y corrección de errores críticos
+- **Últimos avances**: Corrección de problemas con gráficos en PDF, optimización de tabla, mejora de seguridad
+- **Próximos Pasos**: Integración completa con Firebase, testing y despliegue
+- **Timeline Estimado**: MVP en 1-2 semanas, versión completa en 3-4 semanas
 
-## 🚀 Roadmap de Implementación (Timeline Acelerado)
+## 🚀 Roadmap de Implementación (Timeline Actualizado)
 
-### Fase 1: Configuración del Entorno (Días 1-2)
-- [ ] Crear proyecto Firebase
-- [ ] Configurar Firestore, Authentication, Storage
-- [ ] Configurar dominio personalizado
-- [ ] Crear estructura de carpetas del proyecto
+### ✅ Fase 1: Configuración del Entorno (Completada)
+- [x] Crear estructura de carpetas del proyecto
+- [x] Configurar entorno virtual Python
+- [x] Implementar estructura básica de API con FastAPI
+- [x] Configurar proyecto React con Vite
 
-### Fase 2: Backend - API Python (Días 3-5)
-- [ ] Configurar entorno virtual Python
-- [ ] Implementar estructura básica de API con FastAPI
-- [ ] Crear endpoints para procesamiento de Excel
-- [ ] Implementar conexión con Firestore
+### ✅ Fase 2: Implementación de Componentes (En Progreso)
+- [x] Migrar componentes visuales principales
+- [x] Implementar sistema de rutas y estado
+- [x] Migrar lógica de procesamiento de Excel
+- [x] Implementar gráficos interactivos con Recharts
+- [x] Implementar exportación a PDF con gráficos
+- [x] Corregir problemas con refs en componentes de gráficos
+- [x] Optimizar tabla de eventos en PDF
+- [x] Implementar protección de secret keys
 
-### Fase 3: Frontend - React (Días 6-8)
-- [ ] Configurar proyecto React con Vite
-- [ ] Migrar componentes visuales principales
-- [ ] Implementar sistema de rutas y estado
-- [ ] Migrar lógica de procesamiento de Excel
-
-### Fase 4: Integración Firebase (Días 9-10)
+### 🔄 Fase 3: Integración Firebase (Próxima)
 - [ ] Implementar autenticación de usuarios
 - [ ] Conectar frontend con API Python
 - [ ] Implementar almacenamiento de archivos
 - [ ] Configurar reglas de seguridad
 
-### Fase 5: Testing y Despliegue (Días 11-14)
+### 📋 Fase 4: Testing y Despliegue (Pendiente)
 - [ ] Crear suite de tests
 - [ ] Optimizar rendimiento
 - [ ] Configurar Firebase Hosting
@@ -286,8 +314,21 @@ La aplicación utiliza una paleta profesional con gradientes:
 ```
 reportes-conduccion-fullstack/
 ├── frontend/          # Aplicación React
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── store/
+│   │   └── ...
+│   ├── package.json
+│   └── ...
 ├── backend/           # API Python FastAPI
-├── firebase/          # Configuración Firebase
+│   ├── app/
+│   │   ├── core/
+│   │   ├── api/
+│   │   ├── models/
+│   │   └── ...
+│   ├── requirements.txt
+│   └── .env
 ├── docs/              # Documentación
 └── README.md
 ```
@@ -296,7 +337,7 @@ reportes-conduccion-fullstack/
 1. Clonar el repositorio
 2. Configurar Firebase CLI
 3. Instalar dependencias del frontend y backend
-4. Configurar variables de entorno
+4. Configurar variables de entorno (backend/.env)
 5. Ejecutar en modo desarrollo
 
 ## 📞 Soporte y Contacto
@@ -317,4 +358,5 @@ reportes-conduccion-fullstack/
 **Estado del Proyecto**: 🔄 En migración a fullstack  
 **Versión Actual**: 1.0 (Monolítica) → 2.0 (FullStack)  
 **Tecnologías**: React 18 + Python FastAPI + Firebase  
-**Fecha de Actualización**: 22 de septiembre de 2025
+**Fecha de Actualización**: 22 de septiembre de 2025  
+**Últimos Avances**: Corrección de gráficos en PDF, optimización de tabla, mejora de seguridad
