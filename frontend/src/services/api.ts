@@ -1,0 +1,67 @@
+import axios from 'axios'
+
+// Configuración de API según el entorno
+const getApiConfig = () => {
+  // En desarrollo, usar el proxy de Vite
+  if (import.meta.env.DEV) {
+    return {
+      baseURL: '/api',
+      timeout: 30000,
+    }
+  }
+  
+  // En producción, usar la URL del backend desplegado
+  const productionApiUrl = import.meta.env.VITE_API_URL || 'https://reportes-conduccion-backend-uc2a3x5aca-uc.a.run.app'
+  
+  return {
+    baseURL: productionApiUrl,
+    timeout: 30000,
+  }
+}
+
+// Crear instancia de axios con configuración
+const api = axios.create(getApiConfig())
+
+// Interceptores para manejo de errores y autenticación
+api.interceptors.request.use(
+  (config) => {
+    // Aquí podríamos agregar el token de autenticación en el futuro
+    const token = localStorage.getItem('authToken')
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+  },
+  (error) => {
+    return Promise.reject(error)
+  }
+)
+
+api.interceptors.response.use(
+  (response) => {
+    return response
+  },
+  (error) => {
+    // Manejo centralizado de errores
+    if (error.response) {
+      // El servidor respondió con un código de error
+      console.error('Error de API:', error.response.data)
+      
+      // Si es un error de autenticación, redirigir al login
+      if (error.response.status === 401) {
+        localStorage.removeItem('authToken')
+        window.location.href = '/login'
+      }
+    } else if (error.request) {
+      // La solicitud fue hecha pero no se recibió respuesta
+      console.error('Error de red:', error.request)
+    } else {
+      // Error al configurar la solicitud
+      console.error('Error de configuración:', error.message)
+    }
+    
+    return Promise.reject(error)
+  }
+)
+
+export default api

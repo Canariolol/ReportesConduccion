@@ -5,7 +5,7 @@ import uvicorn
 import os
 from contextlib import asynccontextmanager
 
-from .core.config import settings
+from .core.config import settings  # Corregir importación
 from .api import excel
 
 @asynccontextmanager
@@ -83,7 +83,7 @@ async def general_exception_handler(request, exc):
     )
 
 if __name__ == "__main__":
-    # Use PORT environment variable if available (for Cloud Run), otherwise default to 8000
+    # Cloud Run usa PORT=8080, pero para desarrollo local usamos 8000
     port = int(os.getenv("PORT", 8000))
     uvicorn.run(
         "main:app",

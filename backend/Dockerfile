@@ -17,6 +17,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copiar el código de la aplicación
 COPY . .
 
+# Crear directorio para secrets
+RUN mkdir -p /etc/secrets
+
 # Crear un usuario no root para seguridad
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
@@ -24,5 +27,5 @@ USER appuser
 # Exponer el puerto que usa FastAPI (Cloud Run usa 8080)
 EXPOSE 8080
 
-# Comando para ejecutar la aplicación
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
+# Comando para ejecutar la aplicación usando la variable de entorno PORT
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "${PORT:-8080}"]

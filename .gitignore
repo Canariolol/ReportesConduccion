@@ -117,3 +117,6 @@ backend/Dockerfile
 .firebase/hosting.ZGlzdA.cache
 .firebase/hosting.ZnJvbnRlbmRcZGlzdA.cache
 private_key.txt
+backend/west-reportes-conduccion-firebase-adminsdk-fbsvc-12d6ff8c91.json
+backend/serviceAccount.json
+DEPLOY_COMMANDS.md
