@@ -1131,10 +1131,7 @@ const Dashboard: React.FC = () => {
           mt: 'auto',
           borderTop: '1px solid rgba(0, 0, 0, 0.1)',
           backgroundColor: 'background.paper',
-          textAlign: 'center',
-          borderRadius: 3,
-          mx: 3,
-          mb: 3
+          textAlign: 'center'
         }}
       >
         <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>

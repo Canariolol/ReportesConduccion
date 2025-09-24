@@ -124,3 +124,5 @@ DEPLOY_COMMANDS.md
 .contexto/PLAN_MIGRACION.md
 .contexto/PRD.md
 .contexto/README.md
+frontend/src/pages/Dashboard.tsx
+backend/logFirestoreError.txt

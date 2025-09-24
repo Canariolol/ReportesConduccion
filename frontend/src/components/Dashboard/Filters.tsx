@@ -1,8 +1,8 @@
-import React, { useState } from 'react'
-import { Card, CardContent, Box, Typography, Grid, TextField, MenuItem, FormControl, InputLabel, Select, OutlinedInput, Divider, Button, Popover, Stack } from '@mui/material'
-import { FilterList, CalendarToday, Clear } from '@mui/icons-material'
+import React from 'react'
+import { Card, CardContent, Box, Typography, Grid, TextField, MenuItem, FormControl, InputLabel, Select, OutlinedInput, Divider } from '@mui/material'
+import { FilterList } from '@mui/icons-material'
+import DateRangePicker from '../ui/DateRangePicker'
 import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
 
 interface FiltersProps {
   filters: {
@@ -18,71 +18,25 @@ interface FiltersProps {
 }
 
 const Filters: React.FC<FiltersProps> = ({ filters, alarmTypes, vehiclePlate, onFilterChange }) => {
-  const [dateRangeAnchorEl, setDateRangeAnchorEl] = useState<HTMLButtonElement | null>(null)
-  const [tempStartDate, setTempStartDate] = useState<Date | null>(null)
-  const [tempEndDate, setTempEndDate] = useState<Date | null>(null)
-
-  const handleDateRangeOpen = (event: React.MouseEvent<HTMLButtonElement>) => {
-    setDateRangeAnchorEl(event.currentTarget)
-    // Parse existing dates if they exist - fix timezone issue
-    if (filters.fechaInicio) {
-      const [year, month, day] = filters.fechaInicio.split('-').map(Number)
-      setTempStartDate(new Date(year, month - 1, day, 12, 0, 0)) // Set to noon to avoid timezone issues
-    }
-    if (filters.fechaFin) {
-      const [year, month, day] = filters.fechaFin.split('-').map(Number)
-      setTempEndDate(new Date(year, month - 1, day, 12, 0, 0)) // Set to noon to avoid timezone issues
-    }
+  // Convert string dates to Date objects for DateRangePicker
+  const dateRange = {
+    from: filters.fechaInicio ? new Date(filters.fechaInicio) : undefined,
+    to: filters.fechaFin ? new Date(filters.fechaFin) : undefined
   }
 
-  const handleDateRangeClose = () => {
-    setDateRangeAnchorEl(null)
-  }
-
-  const handleDateRangeApply = () => {
-    if (tempStartDate) {
-      onFilterChange('fechaInicio', format(tempStartDate, 'yyyy-MM-dd'))
+  const handleDateRangeSelect = (range: { from: Date | undefined; to?: Date | undefined } | undefined) => {
+    if (range?.from) {
+      onFilterChange('fechaInicio', format(range.from, 'yyyy-MM-dd'))
     } else {
       onFilterChange('fechaInicio', '')
     }
     
-    if (tempEndDate) {
-      onFilterChange('fechaFin', format(tempEndDate, 'yyyy-MM-dd'))
+    if (range?.to) {
+      onFilterChange('fechaFin', format(range.to, 'yyyy-MM-dd'))
     } else {
       onFilterChange('fechaFin', '')
     }
-    
-    handleDateRangeClose()
   }
-
-  const handleDateRangeClear = () => {
-    setTempStartDate(null)
-    setTempEndDate(null)
-    onFilterChange('fechaInicio', '')
-    onFilterChange('fechaFin', '')
-    handleDateRangeClose()
-  }
-
-  const getDateRangeText = () => {
-    if (!filters.fechaInicio && !filters.fechaFin) {
-      return 'Seleccionar rango de fechas'
-    }
-    
-    const startDate = filters.fechaInicio ? format(new Date(filters.fechaInicio), 'dd/MM/yyyy') : ''
-    const endDate = filters.fechaFin ? format(new Date(filters.fechaFin), 'dd/MM/yyyy') : ''
-    
-    if (startDate && endDate) {
-      return `${startDate} - ${endDate}`
-    } else if (startDate) {
-      return `Desde: ${startDate}`
-    } else if (endDate) {
-      return `Hasta: ${endDate}`
-    }
-    
-    return 'Seleccionar rango de fechas'
-  }
-
-  const open = Boolean(dateRangeAnchorEl)
 
   return (
     <Card sx={{ mb: 3 }}>
@@ -133,35 +87,11 @@ const Filters: React.FC<FiltersProps> = ({ filters, alarmTypes, vehiclePlate, on
             </FormControl>
           </Grid>
           <Grid item xs={12} sm={6}>
-            <Button
-              variant="outlined"
-              fullWidth
-              onClick={handleDateRangeOpen}
-              startIcon={<CalendarToday />}
-              endIcon={(filters.fechaInicio || filters.fechaFin) ? <Clear fontSize="small" onClick={(e) => {
-                e.stopPropagation()
-                handleDateRangeClear()
-              }} /> : null}
-              sx={{
-                height: '56px',
-                justifyContent: 'flex-start',
-                borderColor: filters.fechaInicio || filters.fechaFin ? 'primary.main' : 'rgba(0, 0, 0, 0.23)',
-                color: filters.fechaInicio || filters.fechaFin ? 'primary.main' : 'inherit',
-                '&:hover': {
-                  borderColor: 'primary.main',
-                }
-              }}
-            >
-              <Typography 
-                variant="body1" 
-                sx={{ 
-                  color: filters.fechaInicio || filters.fechaFin ? 'primary.main' : 'inherit',
-                  fontWeight: filters.fechaInicio || filters.fechaFin ? 500 : 400
-                }}
-              >
-                {getDateRangeText()}
-              </Typography>
-            </Button>
+            <DateRangePicker
+              selected={dateRange}
+              onSelect={handleDateRangeSelect}
+              placeholder="Seleccionar rango de fechas"
+            />
           </Grid>
           <Grid item xs={12}>
             <TextField
@@ -176,83 +106,6 @@ const Filters: React.FC<FiltersProps> = ({ filters, alarmTypes, vehiclePlate, on
           </Grid>
         </Grid>
       </CardContent>
-
-      {/* Popover para selector de rango de fechas */}
-      <Popover
-        open={open}
-        anchorEl={dateRangeAnchorEl}
-        onClose={handleDateRangeClose}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'left',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'left',
-        }}
-        PaperProps={{
-          sx: {
-            p: 2,
-            minWidth: 320,
-          }
-        }}
-      >
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'primary.main' }}>
-            Seleccionar Rango de Fechas
-          </Typography>
-          <Stack spacing={2}>
-            <TextField
-              label="Fecha Inicio"
-              type="date"
-              value={tempStartDate ? format(tempStartDate, 'yyyy-MM-dd') : ''}
-              onChange={(e) => {
-                if (e.target.value) {
-                  const [year, month, day] = e.target.value.split('-').map(Number)
-                  setTempStartDate(new Date(year, month - 1, day, 12, 0, 0)) // Set to noon to avoid timezone issues
-                } else {
-                  setTempStartDate(null)
-                }
-              }}
-              InputLabelProps={{ shrink: true }}
-              fullWidth
-              size="small"
-            />
-            <TextField
-              label="Fecha Fin"
-              type="date"
-              value={tempEndDate ? format(tempEndDate, 'yyyy-MM-dd') : ''}
-              onChange={(e) => {
-                if (e.target.value) {
-                  const [year, month, day] = e.target.value.split('-').map(Number)
-                  setTempEndDate(new Date(year, month - 1, day, 12, 0, 0)) // Set to noon to avoid timezone issues
-                } else {
-                  setTempEndDate(null)
-                }
-              }}
-              InputLabelProps={{ shrink: true }}
-              fullWidth
-              size="small"
-            />
-          </Stack>
-          <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-            <Button 
-              variant="outlined" 
-              onClick={handleDateRangeClear}
-              size="small"
-            >
-              Limpiar
-            </Button>
-            <Button 
-              variant="contained" 
-              onClick={handleDateRangeApply}
-              size="small"
-            >
-              Aplicar
-            </Button>
-          </Box>
-        </Box>
-      </Popover>
     </Card>
   )
 }
