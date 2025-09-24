@@ -6,7 +6,7 @@ import { format } from "date-fns"
 import { cn } from "../../lib/utils"
 import { Button } from "./button"
 import { Calendar } from "./calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "./popover"
+import { Popover, PopoverDialog, PopoverTrigger } from "./popover"
 
 interface DateRange {
   from: Date | undefined
@@ -59,17 +59,17 @@ function DateRangePicker({
             id="date"
             variant="outline"
             className={cn(
-              "w-full justify-start text-left font-normal rounded-xl border-border bg-background hover:bg-accent hover:text-accent-foreground",
+              "w-full justify-start text-left font-normal rounded-xl border border-input bg-background hover:bg-accent hover:text-accent-foreground min-h-[40px] px-3 py-2 cursor-pointer",
               !selected?.from && "text-muted-foreground"
             )}
-            disabled={disabled}
+            isDisabled={disabled}
           >
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            {formatDateRange(selected)}
+            <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+            <span className="truncate">{formatDateRange(selected)}</span>
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0 rounded-xl border-border" align="start">
-          <div className="p-4 space-y-4">
+        <PopoverDialog className="w-auto p-0 bg-white border border-gray-200 rounded-lg shadow-lg z-[9999]" align="start">
+          <div className="p-4 space-y-4 bg-white">
             <Calendar
               initialFocus
               mode="range"
@@ -77,29 +77,29 @@ function DateRangePicker({
               selected={tempRange}
               onSelect={handleSelect}
               numberOfMonths={2}
-              className="rounded-xl"
+              className="bg-white rounded-lg"
             />
-            <div className="flex justify-end gap-2 pt-2 border-t border-border">
+            <div className="flex justify-end gap-2 pt-2 border-t border-gray-200">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleCancel}
-                className="rounded-lg"
+                className="rounded-lg border-gray-300 text-gray-700 hover:bg-gray-50"
               >
-                Cancel
+                Cancelar
               </Button>
               <Button
                 size="sm"
                 onClick={handleConfirm}
-                className="rounded-lg bg-primary text-primary-foreground hover:bg-primary/90"
-                disabled={!tempRange?.from}
+                className="rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-300"
+                isDisabled={!tempRange?.from}
               >
                 <Check className="mr-1 h-3 w-3" />
-                Confirm
+                Confirmar
               </Button>
             </div>
           </div>
-        </PopoverContent>
+        </PopoverDialog>
       </Popover>
     </div>
   )

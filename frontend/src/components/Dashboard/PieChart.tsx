@@ -17,8 +17,8 @@ interface PieChartProps {
 const PieChartComponent = forwardRef<HTMLDivElement, PieChartProps>(({ data, getAlarmColor }, ref) => {
   const internalRef = useRef<HTMLDivElement>(null)
   
-  // Exponer el ref al componente padre - manejar el caso null
- useImperativeHandle(ref, () => internalRef.current, [])
+  // Exponer el ref al componente padre
+ useImperativeHandle(ref, () => internalRef.current as HTMLDivElement)
 
   const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, name }: any) => {
     const RADIAN = Math.PI / 180
@@ -26,20 +26,20 @@ const PieChartComponent = forwardRef<HTMLDivElement, PieChartProps>(({ data, get
     const x = cx + radius * Math.cos(-midAngle * RADIAN)
     const y = cy + radius * Math.sin(-midAngle * RADIAN)
     
-    // Si hay muchos elementos, mostrar solo el porcentaje
-    const showPercentage = data.length > 6
-    
     return (
       <text 
         x={x} 
         y={y} 
-        fill="black" 
-        textAnchor={x > cx ? 'start' : 'end'} 
+        fill="white" 
+        textAnchor="middle" 
         dominantBaseline="central"
-        fontSize="12"
+        fontSize="16"
         fontWeight="bold"
+        style={{
+          textShadow: '2px 2px 4px rgba(0,0,0,0.9)'
+        }}
       >
-        {showPercentage ? `${(percent * 100).toFixed(1)}%` : `${name}: ${(percent * 100).toFixed(1)}%`}
+        {`${(percent * 100).toFixed(1)}%`}
       </text>
     )
   }
@@ -74,10 +74,18 @@ const PieChartComponent = forwardRef<HTMLDivElement, PieChartProps>(({ data, get
                 dataKey="value"
                 label={renderCustomizedLabel}
                 labelLine={false}
+                isAnimationActive={true}
+                animationDuration={1000}
+                animationEasing="ease-out"
+                animationBegin={0}
               >
-                {data.map((entry) => (
-                  <Cell key={entry.name} fill={getAlarmColor(entry.name)} stroke="white" strokeWidth={2} />
-                ))}
+                {data.map((entry, index) => {
+                  const baseColor = getAlarmColor(entry.name)
+                  
+                  return (
+                    <Cell key={entry.name} fill={baseColor} stroke="white" strokeWidth={2} />
+                  )
+                })}
               </Pie>
               <RechartsTooltip 
                 contentStyle={{

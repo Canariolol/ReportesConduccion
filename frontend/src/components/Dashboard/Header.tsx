@@ -21,7 +21,14 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle }) => {
         >
           {title}
         </Typography>
-        <Typography variant="h6" color="text.secondary">
+        <Typography 
+          variant="subtitle1" 
+          color="text.secondary"
+          sx={{ 
+            fontSize: '1rem',
+            fontWeight: 400
+          }}
+        >
           {subtitle}
         </Typography>
       </Box>

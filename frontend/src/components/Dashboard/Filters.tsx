@@ -1,7 +1,8 @@
 import React from 'react'
 import { Card, CardContent, Box, Typography, Grid, TextField, MenuItem, FormControl, InputLabel, Select, OutlinedInput, Divider } from '@mui/material'
 import { FilterList } from '@mui/icons-material'
-import DateRangePicker from '../ui/DateRangePicker'
+import DateRangePicker from '../ui/date-range-picker'
+import { CalendarDate } from '@internationalized/date'
 import { format } from 'date-fns'
 
 interface FiltersProps {
@@ -18,21 +19,21 @@ interface FiltersProps {
 }
 
 const Filters: React.FC<FiltersProps> = ({ filters, alarmTypes, vehiclePlate, onFilterChange }) => {
-  // Convert string dates to Date objects for DateRangePicker
-  const dateRange = {
-    from: filters.fechaInicio ? new Date(filters.fechaInicio) : undefined,
-    to: filters.fechaFin ? new Date(filters.fechaFin) : undefined
+  // Convert string dates to CalendarDate objects for JollyDateRangePicker
+  const dateRange: any = {
+    start: filters.fechaInicio ? new CalendarDate(parseInt(filters.fechaInicio.split('-')[2]), parseInt(filters.fechaInicio.split('-')[1]), parseInt(filters.fechaInicio.split('-')[0])) : undefined,
+    end: filters.fechaFin ? new CalendarDate(parseInt(filters.fechaFin.split('-')[2]), parseInt(filters.fechaFin.split('-')[1]), parseInt(filters.fechaFin.split('-')[0])) : undefined
   }
 
-  const handleDateRangeSelect = (range: { from: Date | undefined; to?: Date | undefined } | undefined) => {
-    if (range?.from) {
-      onFilterChange('fechaInicio', format(range.from, 'yyyy-MM-dd'))
+  const handleDateRangeSelect = (range: any) => {
+    if (range?.start) {
+      onFilterChange('fechaInicio', `${range.start.day.toString().padStart(2, '0')}-${range.start.month.toString().padStart(2, '0')}-${range.start.year}`)
     } else {
       onFilterChange('fechaInicio', '')
     }
     
-    if (range?.to) {
-      onFilterChange('fechaFin', format(range.to, 'yyyy-MM-dd'))
+    if (range?.end) {
+      onFilterChange('fechaFin', `${range.end.day.toString().padStart(2, '0')}-${range.end.month.toString().padStart(2, '0')}-${range.end.year}`)
     } else {
       onFilterChange('fechaFin', '')
     }
@@ -87,11 +88,52 @@ const Filters: React.FC<FiltersProps> = ({ filters, alarmTypes, vehiclePlate, on
             </FormControl>
           </Grid>
           <Grid item xs={12} sm={6}>
-            <DateRangePicker
-              selected={dateRange}
-              onSelect={handleDateRangeSelect}
-              placeholder="Seleccionar rango de fechas"
-            />
+            <FormControl fullWidth>
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 1,
+                border: '1px solid rgba(0, 0, 0, 0.23)',
+                borderRadius: 1,
+                px: 2,
+                py: 1,
+                '&:hover': {
+                  borderColor: 'rgba(0, 0, 0, 0.87)',
+                },
+                '&.Mui-focused': {
+                  borderColor: '#1976d2',
+                  borderWidth: 2,
+                }
+              }}>
+                <TextField
+                  value={filters.fechaInicio || ''}
+                  onChange={(e) => onFilterChange('fechaInicio', e.target.value)}
+                  placeholder="Fecha inicio"
+                  variant="standard"
+                  InputProps={{
+                    disableUnderline: true,
+                    style: { fontSize: '14px' }
+                  }}
+                  sx={{ flex: 1 }}
+                />
+                <span style={{ color: 'rgba(0, 0, 0, 0.6)' }}>-</span>
+                <TextField
+                  value={filters.fechaFin || ''}
+                  onChange={(e) => onFilterChange('fechaFin', e.target.value)}
+                  placeholder="Fecha fin"
+                  variant="standard"
+                  InputProps={{
+                    disableUnderline: true,
+                    style: { fontSize: '14px' }
+                  }}
+                  sx={{ flex: 1 }}
+                />
+                <DateRangePicker
+                  selected={dateRange}
+                  onSelect={handleDateRangeSelect}
+                />
+              </Box>
+            </FormControl>
           </Grid>
           <Grid item xs={12}>
             <TextField

@@ -20,6 +20,7 @@ import EventsTable from '../components/Dashboard/EventsTable.tsx'
 
 // Utilidades de exportación
 import { captureChartAsImage, getAlarmColor, formatTimestamp } from '../components/Dashboard/ExportUtils.tsx'
+import { applyEnhancedStyles, addEnhancedMetricsTable, createEnhancedWorksheet, WEST_COLORS, FONT_STYLES } from '../components/Dashboard/ExcelStyleUtils.tsx'
 
 const Dashboard: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>()
@@ -46,6 +47,17 @@ const Dashboard: React.FC = () => {
   // Estado para conteo de eventos filtrados
   const [filteredEventsCount, setFilteredEventsCount] = useState(0)
   
+  // Función para transformar nombres de empresas
+  const transformCompanyName = (companyName: string): string => {
+    const companyMap: Record<string, string> = {
+      'TPF': 'TRANS PACIFIC FIBRE SA',
+      'Bosque Los Lagos': 'BOSQUES LOS LAGOS SPA',
+      'Llico': 'SOC. DE TRANSP. LLICO LTDA.'
+    }
+    
+    return companyMap[companyName] || companyName
+  }
+  
   // Función para extraer empresas de los datos del conductor
   const extractCompaniesFromData = () => {
     if (!currentReport) return []
@@ -69,13 +81,28 @@ const Dashboard: React.FC = () => {
     return Array.from(companies)
   }
   
+  // Función para obtener el nombre completo de la empresa del evento
+  const getEventCompanyName = (event: any): string => {
+    if (!event.driver) return 'Sin empresa'
+    
+    // Buscar empresas entre paréntesis en el nombre del conductor
+    const match = event.driver.match(/\(([^)]+)\)/)
+    if (match) {
+      const company = match[1].trim()
+      return transformCompanyName(company)
+    }
+    
+    return 'Sin empresa'
+  }
+  
   // Actualizar empresas disponibles cuando cambie el reporte
   React.useEffect(() => {
     if (currentReport) {
       const companies = extractCompaniesFromData()
-      setAvailableCompanies(companies)
-      if (companies.length > 0 && !selectedCompany) {
-        setSelectedCompany(companies[0])
+      const transformedCompanies = companies.map(transformCompanyName)
+      setAvailableCompanies(transformedCompanies)
+      if (transformedCompanies.length > 0 && !selectedCompany) {
+        setSelectedCompany(transformedCompanies[0])
       }
     }
   }, [currentReport])
@@ -138,7 +165,7 @@ const Dashboard: React.FC = () => {
     
     // Mostrar modal de carga
     setModalTitle('Exportando a Excel')
-    setModalContent('Generando reporte de Excel con los datos filtrados...')
+    setModalContent('Generando reporte de Excel con diseño mejorado...')
     setModalLoading(true)
     setExportModalOpen(true)
     
@@ -147,100 +174,53 @@ const Dashboard: React.FC = () => {
       const filteredEvents = getFilteredEvents()
       const workbook = XLSX.utils.book_new()
       
-      // 1. Crear hoja de resumen con título y métricas
-      const summaryWorksheet = XLSX.utils.aoa_to_sheet([
-        // Título principal
-        ['Reporte de Alarmas de Conducción'],
-        [''],
+      // 1. Crear hoja de resumen con diseño mejorado
+      const summaryData = [
         // Información del reporte
-        ['Empresa:', selectedCompany || 'N/A'],
-        ['Vehículo:', currentReport.vehicle_plate],
-        ['Archivo:', currentReport.file_name],
-        ['Fecha de Exportación:', format(new Date(), 'dd/MM/yyyy HH:mm')],
-        [''],
-        // Título de la tabla de métricas
-        ['Resumen de Métricas'],
-        ['Métrica', 'Valor'],
-        ['Total de Alarmas', currentReport.summary.totalAlarms],
-        ['Tipos de Alarma', Object.keys(currentReport.summary.alarmTypes).length],
-        // Solo incluir Videos Solicitados si es mayor que 0
-        ...(currentReport.summary.videosRequested && currentReport.summary.videosRequested > 0 ? 
-          [['Vídeos Solicitados', currentReport.summary.videosRequested]] : []
-        ),
-        ['Eventos Filtrados', filteredEvents.length]
-      ])
-      
-      // Configurar anchos de columna para resumen
-      summaryWorksheet['!cols'] = [
-        { wch: 25 }, // Columna A - Métricas
-        { wch: 20 }  // Columna B - Valores
+        ['Empresa', selectedCompany || 'N/A'],
+        ['Vehículo', currentReport.vehicle_plate],
+        ['Archivo', currentReport.file_name],
+        ['Fecha de Exportación', format(new Date(), 'dd/MM/yyyy HH:mm')]
       ]
       
-      // Aplicar estilos a hoja de resumen
-      const summaryRange = XLSX.utils.decode_range(summaryWorksheet['!ref'] || 'A1')
+      // Crear hoja de resumen con diseño mejorado
+      const summaryWorksheet = createEnhancedWorksheet(
+        [],
+        'Reporte de Alarmas de Conducción',
+        ['Información del Reporte']
+      )
       
-      // Estilo para título principal
-      const titleStyle = {
-        font: { bold: true, sz: 16, color: { rgb: "1565C0" } },
-        alignment: { horizontal: "center" }
+      // Agregar información del reporte
+      summaryData.forEach((info, index) => {
+        const labelCellAddress = XLSX.utils.encode_cell({ r: 3 + index, c: 0 })
+        const valueCellAddress = XLSX.utils.encode_cell({ r: 3 + index, c: 1 })
+        
+        summaryWorksheet[labelCellAddress] = { v: info[0], s: FONT_STYLES.infoLabel }
+        summaryWorksheet[valueCellAddress] = { v: info[1], s: FONT_STYLES.infoValue }
+      })
+      
+      // Agregar espacio y título de métricas
+      const metricsTitleCellAddress = XLSX.utils.encode_cell({ r: 8, c: 0 })
+      summaryWorksheet[metricsTitleCellAddress] = { v: 'Resumen de Métricas', s: FONT_STYLES.subtitle }
+      
+      // Agregar tabla de métricas con diseño mejorado
+      let metricsData: [string, string][] = [
+        ['Total de Alarmas', currentReport.summary.totalAlarms.toString()],
+        ['Tipos de Alarma', Object.keys(currentReport.summary.alarmTypes).length.toString()],
+        ['Eventos Filtrados', filteredEvents.length.toString()]
+      ]
+      
+      // Solo incluir Videos Solicitados si es mayor que 0
+      if (currentReport.summary.videosRequested && currentReport.summary.videosRequested > 0) {
+        metricsData.splice(2, 0, ['Vídeos Solicitados', currentReport.summary.videosRequested.toString()])
       }
       
-      // Estilo para encabezados de tabla
-      const tableHeaderStyle = {
-        font: { bold: true, color: { rgb: "FFFFFF" } },
-        fill: { fgColor: { rgb: "1565C0" } },
-        alignment: { horizontal: "center", vertical: "center" },
-        border: {
-          top: { style: "thin", color: { rgb: "000000" } },
-          bottom: { style: "thin", color: { rgb: "000000" } },
-          left: { style: "thin", color: { rgb: "000000" } },
-          right: { style: "thin", color: { rgb: "000000" } }
-        }
-      }
+      const nextRow = addEnhancedMetricsTable(summaryWorksheet, metricsData, 9)
       
-      // Estilo para datos de tabla
-      const tableDataStyle = {
-        font: { color: { rgb: "000000" } },
-        alignment: { horizontal: "left", vertical: "center" },
-        border: {
-          top: { style: "thin", color: { rgb: "E0E0E0" } },
-          bottom: { style: "thin", color: { rgb: "E0E0E0" } },
-          left: { style: "thin", color: { rgb: "E0E0E0" } },
-          right: { style: "thin", color: { rgb: "E0E0E0" } }
-        }
-      }
+      // Actualizar el rango de la hoja
+      summaryWorksheet['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: nextRow, c: 1 } })
       
-      // Estilo para etiquetas de información
-      const labelStyle = {
-        font: { bold: true, color: { rgb: "1565C0" } }
-      }
-      
-      // Aplicar estilos a celdas específicas
-      for (let row = summaryRange.s.r; row <= summaryRange.e.r; row++) {
-        for (let col = summaryRange.s.c; col <= summaryRange.e.c; col++) {
-          const cellAddress = XLSX.utils.encode_cell({ r: row, c: col })
-          if (!summaryWorksheet[cellAddress]) continue
-          
-          // Título principal (A1)
-          if (row === 0 && col === 0) {
-            summaryWorksheet[cellAddress].s = titleStyle
-          }
-          // Etiquetas de información (A4, A5, A6, A7)
-          else if ((row === 3 || row === 4 || row === 5 || row === 6) && col === 0) {
-            summaryWorksheet[cellAddress].s = labelStyle
-          }
-          // Encabezados de tabla de métricas (A9, B9)
-          else if (row === 8) {
-            summaryWorksheet[cellAddress].s = tableHeaderStyle
-          }
-          // Datos de tabla de métricas (A10 en adelante)
-          else if (row >= 9) {
-            summaryWorksheet[cellAddress].s = tableDataStyle
-          }
-        }
-      }
-      
-      // 2. Crear hoja de eventos filtrados
+      // 2. Crear hoja de eventos filtrados con diseño mejorado
       const excelData = filteredEvents.map((event, index) => {
         // Formatear fecha para mostrar en formato normalizado
         let formattedDate = event.timestamp
@@ -255,130 +235,30 @@ const Dashboard: React.FC = () => {
           console.error('Error formateando fecha:', event.timestamp, error)
         }
         
-        return {
-          '#': index + 1,
-          'Fecha y Hora': formattedDate,
-          'Patente': event.vehiclePlate,
-          'Tipo de Alarma': event.alarmType,
-          'Conductor': event.driver || 'Sin conductor',
-          'Comentarios': event.comments || 'Sin comentarios'
-        }
+        return [
+          index + 1,
+          formattedDate,
+          event.vehiclePlate,
+          event.alarmType,
+          event.driver || 'Sin conductor',
+          getEventCompanyName(event),
+          event.comments || 'Sin comentarios'
+        ]
       })
       
-      const eventsWorksheet = XLSX.utils.json_to_sheet(excelData)
-      
-      // Auto-ajustar anchos de columna al contenido
-      const colWidths = [
-        Math.max(5, ...['#'].map(s => s.length)), // #
-        Math.max(20, ...excelData.map(row => row['Fecha y Hora']?.toString().length || 0)), // Fecha y Hora
-        Math.max(15, ...excelData.map(row => row['Patente']?.toString().length || 0)), // Patente
-        Math.max(25, ...excelData.map(row => row['Tipo de Alarma']?.toString().length || 0)), // Tipo de Alarma
-        Math.max(30, ...excelData.map(row => row['Conductor']?.toString().length || 0)), // Conductor
-        Math.max(40, ...excelData.map(row => row['Comentarios']?.toString().length || 0)) // Comentarios
-      ]
-      
-      eventsWorksheet['!cols'] = colWidths.map(wch => ({ wch }))
-      
-      // Aplicar estilos a hoja de eventos
-      const eventsRange = XLSX.utils.decode_range(eventsWorksheet['!ref'] || 'A1')
-      
-      // Estilo para encabezados de eventos
-      const eventsHeaderStyle = {
-        font: { bold: true, color: { rgb: "FFFFFF" } },
-        fill: { fgColor: { rgb: "1565C0" } },
-        alignment: { horizontal: "center", vertical: "center" },
-        border: {
-          top: { style: "thin", color: { rgb: "000000" } },
-          bottom: { style: "thin", color: { rgb: "000000" } },
-          left: { style: "thin", color: { rgb: "000000" } },
-          right: { style: "thin", color: { rgb: "000000" } }
-        }
-      }
-      
-      // Estilo para filas de datos de eventos
-      const eventsDataStyle = {
-        font: { color: { rgb: "000000" } },
-        alignment: { horizontal: "left", vertical: "center", wrapText: true },
-        border: {
-          top: { style: "thin", color: { rgb: "E0E0E0" } },
-          bottom: { style: "thin", color: { rgb: "E0E0E0" } },
-          left: { style: "thin", color: { rgb: "E0E0E0" } },
-          right: { style: "thin", color: { rgb: "E0E0E0" } }
-        }
-      }
-      
-      // Estilo para filas alternadas de eventos
-      const eventsAltRowStyle = {
-        font: { color: { rgb: "000000" } },
-        fill: { fgColor: { rgb: "F5F5F5" } },
-        alignment: { horizontal: "left", vertical: "center", wrapText: true },
-        border: {
-          top: { style: "thin", color: { rgb: "E0E0E0" } },
-          bottom: { style: "thin", color: { rgb: "E0E0E0" } },
-          left: { style: "thin", color: { rgb: "E0E0E0" } },
-          right: { style: "thin", color: { rgb: "E0E0E0" } }
-        }
-      }
-      
-      // Aplicar estilos a encabezados de eventos
-      for (let col = eventsRange.s.c; col <= eventsRange.e.c; col++) {
-        const cellAddress = XLSX.utils.encode_cell({ r: eventsRange.s.r, c: col })
-        if (!eventsWorksheet[cellAddress]) continue
-        eventsWorksheet[cellAddress].s = eventsHeaderStyle
-      }
-      
-      // Aplicar estilos a filas de datos de eventos
-      for (let row = eventsRange.s.r + 1; row <= eventsRange.e.r; row++) {
-        for (let col = eventsRange.s.c; col <= eventsRange.e.c; col++) {
-          const cellAddress = XLSX.utils.encode_cell({ r: row, c: col })
-          if (!eventsWorksheet[cellAddress]) continue
-          
-          // Aplicar estilo alternado para filas pares
-          if (row % 2 === 0) {
-            eventsWorksheet[cellAddress].s = eventsAltRowStyle
-          } else {
-            eventsWorksheet[cellAddress].s = eventsDataStyle
-          }
-        }
-        
-        // Aplicar colores específicos a la columna "Tipo de Alarma" (columna D, índice 3)
-        const alarmTypeCellAddress = XLSX.utils.encode_cell({ r: row, c: 3 })
-        if (eventsWorksheet[alarmTypeCellAddress]) {
-          const alarmType = eventsWorksheet[alarmTypeCellAddress].v
-          const color = getAlarmColor(alarmType)
-          
-          // Convertir color hex a RGB para Excel
-          const hex = color.replace('#', '')
-          const r = parseInt(hex.substring(0, 2), 16)
-          const g = parseInt(hex.substring(2, 4), 16)
-          const b = parseInt(hex.substring(4, 6), 16)
-          
-          // Crear estilo especial para celdas de tipo de alarma
-          eventsWorksheet[alarmTypeCellAddress].s = {
-            font: { 
-              color: { rgb: "FFFFFF" }, // Texto blanco
-              bold: true 
-            },
-            fill: { 
-              fgColor: { rgb: `${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}` } 
-            },
-            alignment: { 
-              horizontal: "center", 
-              vertical: "center" 
-            },
-            border: {
-              top: { style: "thin", color: { rgb: "000000" } },
-              bottom: { style: "thin", color: { rgb: "000000" } },
-              left: { style: "thin", color: { rgb: "000000" } },
-              right: { style: "thin", color: { rgb: "000000" } }
-            }
-          }
-        }
-      }
+      // Crear hoja de eventos con diseño mejorado
+      const eventsWorksheet = createEnhancedWorksheet(
+        excelData,
+        'Eventos Filtrados',
+        ['#', 'Fecha y Hora', 'Patente', 'Tipo de Alarma', 'Conductor', 'Empresa', 'Comentarios']
+      )
       
       // Agregar hojas al workbook en el orden correcto
       XLSX.utils.book_append_sheet(workbook, summaryWorksheet, 'Resumen')
       XLSX.utils.book_append_sheet(workbook, eventsWorksheet, 'Eventos Filtrados')
+      
+      // Aplicar estilos mejorados a todo el workbook
+      applyEnhancedStyles(workbook)
       
       // Guardar archivo
       const companySuffix = selectedCompany ? `_${selectedCompany.replace(/\s+/g, '_')}` : ''
@@ -387,7 +267,7 @@ const Dashboard: React.FC = () => {
       // Mostrar modal de éxito
       setModalLoading(false)
       setModalTitle('Exportación Completada')
-      setModalContent(`El reporte de Excel se ha generado exitosamente con ${filteredEvents.length} eventos.`)
+      setModalContent(`El reporte de Excel se ha generado exitosamente con diseño mejorado y ${filteredEvents.length} eventos.`)
       
       console.log(`Excel exportado exitosamente con ${filteredEvents.length} eventos`)
     }).catch(error => {
@@ -666,7 +546,9 @@ const Dashboard: React.FC = () => {
           console.log(`Dimensiones gráfico área: ${chartWidth}x${chartHeight}`)
           console.log(`Datos de imagen: ${areaChartResult.imageData.substring(0, 50)}...`)
           
-          pdf.addImage(areaChartResult.imageData, 'PNG', 25, currentY, chartWidth, chartHeight)
+          // Centrar horizontalmente el gráfico de área
+          const areaCenterX = (pageWidth - chartWidth) / 2
+          pdf.addImage(areaChartResult.imageData, 'PNG', areaCenterX, currentY, chartWidth, chartHeight)
           currentY += chartHeight + 15
         }
         
@@ -701,7 +583,9 @@ const Dashboard: React.FC = () => {
           console.log(`Dimensiones gráfico líneas: ${chartWidth}x${chartHeight}`)
           console.log(`Datos de imagen: ${lineChartResult.imageData.substring(0, 50)}...`)
           
-          pdf.addImage(lineChartResult.imageData, 'PNG', 25, currentY, chartWidth, chartHeight)
+          // Centrar horizontalmente el gráfico de líneas
+          const lineCenterX = (pageWidth - chartWidth) / 2
+          pdf.addImage(lineChartResult.imageData, 'PNG', lineCenterX, currentY, chartWidth, chartHeight)
           currentY += chartHeight + 15
         }
         
@@ -719,8 +603,8 @@ const Dashboard: React.FC = () => {
         
         const tableStartY = startY + 10
         const rowHeight = 6
-        // CORREGIDO: Ajustar anchos de columnas - Conductor más angosta, limitar contenido
-        const colWidths = [25, 35, 40, 30, pageWidth - 130] // Fechas, Patente, Tipo, Conductor, Comentarios
+        // CORREGIDO: Ajustar anchos de columnas - Tipo más ancha, Conductor más angosta
+        const colWidths = [25, 35, 50, 20, pageWidth - 130] // Fechas, Patente, Tipo, Conductor, Comentarios
         
         // Encabezados de tabla
         pdf.setFillColor(primaryColor)
@@ -730,8 +614,8 @@ const Dashboard: React.FC = () => {
         pdf.setTextColor(255, 255, 255)
         pdf.text('Fecha', 17, tableStartY + 4)
         pdf.text('Patente', 52, tableStartY + 4) // Ajustado posición
-        pdf.text('Tipo', 87, tableStartY + 4) // Ajustado posición
-        pdf.text('Conductor', 122, tableStartY + 4) // Ajustado posición (más a la izquierda)
+        pdf.text('Tipo', 97, tableStartY + 4) // Ajustado posición (más a la derecha para más espacio)
+        pdf.text('Conductor', 127, tableStartY + 4) // Ajustado posición (más a la izquierda)
         pdf.text('Comentarios', 152, tableStartY + 4) // Ajustado posición
         
         // Contenido de la tabla - MOSTRAR TODOS LOS EVENTOS
@@ -758,8 +642,8 @@ const Dashboard: React.FC = () => {
             pdf.text('Fecha', 17, currentY + 4)
             pdf.text('Patente', 52, currentY + 4)
             pdf.text('Tipo', 87, currentY + 4)
-            pdf.text('Conductor', 122, currentY + 4)
-            pdf.text('Comentarios', 152, currentY + 4)
+            pdf.text('Conductor', 107, currentY + 4)
+            pdf.text('Comentarios', 142, currentY + 4)
             
             currentY += rowHeight
             pdf.setTextColor(0, 0, 0)
@@ -778,12 +662,12 @@ const Dashboard: React.FC = () => {
           pdf.setTextColor(0, 0, 0)
           pdf.text(formattedDate, 17, currentY + 4)
           pdf.text(event.vehiclePlate, 52, currentY + 4) // Ajustado posición
-          pdf.text(event.alarmType, 87, currentY + 4) // Ajustado posición
+          pdf.text(event.alarmType, 97, currentY + 4) // Ajustado posición (más a la derecha para más espacio)
           
           // Conductor - limitar contenido para que no pase a la siguiente columna
           const driver = event.driver || 'Sin conductor'
           const truncatedDriver = driver.length > 15 ? driver.substring(0, 15) + '...' : driver
-          pdf.text(truncatedDriver, 122, currentY + 4) // Ajustado posición
+          pdf.text(truncatedDriver, 127, currentY + 4) // Ajustado posición (más a la izquierda)
           
           // Comentarios truncados intencionalmente
           const comments = event.comments || 'Sin comentarios'
