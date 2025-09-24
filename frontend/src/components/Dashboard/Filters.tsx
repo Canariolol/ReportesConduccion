@@ -24,12 +24,14 @@ const Filters: React.FC<FiltersProps> = ({ filters, alarmTypes, vehiclePlate, on
 
   const handleDateRangeOpen = (event: React.MouseEvent<HTMLButtonElement>) => {
     setDateRangeAnchorEl(event.currentTarget)
-    // Parse existing dates if they exist
+    // Parse existing dates if they exist - fix timezone issue
     if (filters.fechaInicio) {
-      setTempStartDate(new Date(filters.fechaInicio))
+      const [year, month, day] = filters.fechaInicio.split('-').map(Number)
+      setTempStartDate(new Date(year, month - 1, day, 12, 0, 0)) // Set to noon to avoid timezone issues
     }
     if (filters.fechaFin) {
-      setTempEndDate(new Date(filters.fechaFin))
+      const [year, month, day] = filters.fechaFin.split('-').map(Number)
+      setTempEndDate(new Date(year, month - 1, day, 12, 0, 0)) // Set to noon to avoid timezone issues
     }
   }
 
@@ -205,7 +207,12 @@ const Filters: React.FC<FiltersProps> = ({ filters, alarmTypes, vehiclePlate, on
               type="date"
               value={tempStartDate ? format(tempStartDate, 'yyyy-MM-dd') : ''}
               onChange={(e) => {
-                setTempStartDate(e.target.value ? new Date(e.target.value) : null)
+                if (e.target.value) {
+                  const [year, month, day] = e.target.value.split('-').map(Number)
+                  setTempStartDate(new Date(year, month - 1, day, 12, 0, 0)) // Set to noon to avoid timezone issues
+                } else {
+                  setTempStartDate(null)
+                }
               }}
               InputLabelProps={{ shrink: true }}
               fullWidth
@@ -216,7 +223,12 @@ const Filters: React.FC<FiltersProps> = ({ filters, alarmTypes, vehiclePlate, on
               type="date"
               value={tempEndDate ? format(tempEndDate, 'yyyy-MM-dd') : ''}
               onChange={(e) => {
-                setTempEndDate(e.target.value ? new Date(e.target.value) : null)
+                if (e.target.value) {
+                  const [year, month, day] = e.target.value.split('-').map(Number)
+                  setTempEndDate(new Date(year, month - 1, day, 12, 0, 0)) // Set to noon to avoid timezone issues
+                } else {
+                  setTempEndDate(null)
+                }
               }}
               InputLabelProps={{ shrink: true }}
               fullWidth

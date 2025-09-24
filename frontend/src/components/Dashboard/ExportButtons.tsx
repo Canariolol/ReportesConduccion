@@ -1,11 +1,12 @@
 import React from 'react'
 import { Box, Button, FormControl, InputLabel, Select, MenuItem, Typography } from '@mui/material'
-import { GetApp, PictureAsPdf, Save, Business } from '@mui/icons-material'
+import { GetApp, PictureAsPdf, Save, Business, Refresh } from '@mui/icons-material'
 
 interface ExportButtonsProps {
   onExportExcel: () => void
   onExportPDF: () => void
   onSaveToDB: () => void
+  onRestart: () => void
   selectedCompany: string
   availableCompanies: string[]
   onCompanyChange: (company: string) => void
@@ -15,6 +16,7 @@ const ExportButtons: React.FC<ExportButtonsProps> = ({
   onExportExcel, 
   onExportPDF, 
   onSaveToDB,
+  onRestart,
   selectedCompany,
   availableCompanies,
   onCompanyChange
@@ -135,6 +137,36 @@ const ExportButtons: React.FC<ExportButtonsProps> = ({
             Guardar en BD
           </Button>
         </Box>
+      </Box>
+
+      {/* Botón de Empezar de Nuevo */}
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center',
+        pt: 2,
+        borderTop: '1px solid rgba(0, 0, 0, 0.1)'
+      }}>
+        <Button
+          variant="outlined"
+          startIcon={<Refresh />}
+          onClick={onRestart}
+          sx={{
+            fontWeight: 600,
+            px: 4,
+            py: 1.5,
+            borderColor: 'error.main',
+            color: 'error.main',
+            '&:hover': {
+              borderColor: 'error.dark',
+              bgcolor: 'error.main',
+              color: 'white',
+              transform: 'translateY(-2px)',
+              boxShadow: '0 6px 20px rgba(244, 67, 54, 0.4)',
+            }
+          }}
+        >
+          Empezar de Nuevo
+        </Button>
       </Box>
 
       {/* Información de exportación */}

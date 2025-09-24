@@ -1,9 +1,10 @@
 import React, { useState, useCallback, useRef } from 'react'
-import { Box, Grid, CircularProgress, Alert } from '@mui/material'
+import { Box, Grid, CircularProgress, Alert, Typography } from '@mui/material'
 import { useDispatch, useSelector } from 'react-redux'
 import { AppDispatch, RootState } from '../store/store.ts'
 import { uploadExcel, getReports, clearCurrentReport } from '../store/slices/excelSlice.ts'
 import { format } from 'date-fns'
+import Modal from '../components/ui/Modal.tsx'
 
 // Componentes especializados
 import Header from '../components/Dashboard/Header.tsx'
@@ -34,6 +35,16 @@ const Dashboard: React.FC = () => {
   
   const [selectedCompany, setSelectedCompany] = useState<string>('')
   const [availableCompanies, setAvailableCompanies] = useState<string[]>([])
+  
+  // Estados para modales
+  const [uploadModalOpen, setUploadModalOpen] = useState(false)
+  const [exportModalOpen, setExportModalOpen] = useState(false)
+  const [modalTitle, setModalTitle] = useState('')
+  const [modalContent, setModalContent] = useState('')
+  const [modalLoading, setModalLoading] = useState(false)
+  
+  // Estado para conteo de eventos filtrados
+  const [filteredEventsCount, setFilteredEventsCount] = useState(0)
   
   // Función para extraer empresas de los datos del conductor
   const extractCompaniesFromData = () => {
@@ -68,6 +79,14 @@ const Dashboard: React.FC = () => {
       }
     }
   }, [currentReport])
+  
+  // Actualizar conteo de eventos filtrados cuando cambien los filtros
+  React.useEffect(() => {
+    if (currentReport) {
+      const count = getFilteredEvents().length
+      setFilteredEventsCount(count)
+    }
+  }, [filters, currentReport])
 
   // Refs para los gráficos
   const pieChartRef = useRef<HTMLDivElement>(null)
@@ -116,6 +135,12 @@ const Dashboard: React.FC = () => {
 
   const exportToExcel = () => {
     if (!currentReport) return
+    
+    // Mostrar modal de carga
+    setModalTitle('Exportando a Excel')
+    setModalContent('Generando reporte de Excel con los datos filtrados...')
+    setModalLoading(true)
+    setExportModalOpen(true)
     
     // Importación dinámica para evitar errores de compilación
     import('xlsx').then(XLSX => {
@@ -359,14 +384,29 @@ const Dashboard: React.FC = () => {
       const companySuffix = selectedCompany ? `_${selectedCompany.replace(/\s+/g, '_')}` : ''
       XLSX.writeFile(workbook, `reporte_conducción_${currentReport.vehicle_plate}${companySuffix}_${format(new Date(), 'yyyyMMdd_HHmm')}.xlsx`)
       
+      // Mostrar modal de éxito
+      setModalLoading(false)
+      setModalTitle('Exportación Completada')
+      setModalContent(`El reporte de Excel se ha generado exitosamente con ${filteredEvents.length} eventos.`)
+      
       console.log(`Excel exportado exitosamente con ${filteredEvents.length} eventos`)
     }).catch(error => {
       console.error('Error al exportar a Excel:', error)
+      // Mostrar modal de error
+      setModalLoading(false)
+      setModalTitle('Error en Exportación')
+      setModalContent('No se pudo generar el reporte de Excel. Por favor, intente nuevamente.')
     })
   }
 
   const exportToPDF = async () => {
     if (!currentReport) return
+    
+    // Mostrar modal de carga
+    setModalTitle('Exportando a PDF')
+    setModalContent('Generando reporte PDF con gráficos y datos filtrados...')
+    setModalLoading(true)
+    setExportModalOpen(true)
     
     try {
       console.log('Iniciando generación de PDF...')
@@ -582,7 +622,7 @@ const Dashboard: React.FC = () => {
           currentY += 12
           
           // Calcular dimensiones manteniendo proporción - AGRANDADO
-          const chartWidth = 160  // Aumentado de 120 a 160
+          const chartWidth = 180  // Aumentado de 160 a 180 para mejor legibilidad
           const aspectRatio = pieChartResult.height / pieChartResult.width
           const chartHeight = chartWidth * aspectRatio
           
@@ -618,8 +658,8 @@ const Dashboard: React.FC = () => {
           
           currentY += 12
           
-          // Calcular dimensiones manteniendo proporción
-          const chartWidth = 160
+          // Calcular dimensiones manteniendo proporción - AGRANDADO
+          const chartWidth = 180  // Aumentado de 160 a 180 para mejor legibilidad
           const aspectRatio = areaChartResult.height / areaChartResult.width
           const chartHeight = chartWidth * aspectRatio
           
@@ -653,8 +693,8 @@ const Dashboard: React.FC = () => {
           
           currentY += 12
           
-          // Calcular dimensiones manteniendo proporción
-          const chartWidth = 160
+          // Calcular dimensiones manteniendo proporción - AGRANDADO
+          const chartWidth = 180  // Aumentado de 160 a 180 para mejor legibilidad
           const aspectRatio = lineChartResult.height / lineChartResult.width
           const chartHeight = chartWidth * aspectRatio
           
@@ -802,9 +842,17 @@ const Dashboard: React.FC = () => {
       pdf.save(fileName)
       
       console.log(`PDF generado exitosamente con todos los ${filteredEvents.length} eventos filtrados`)
+      
+      // Mostrar modal de éxito
+      setModalLoading(false)
+      setModalTitle('Exportación Completada')
+      setModalContent(`El reporte PDF se ha generado exitosamente con ${filteredEvents.length} eventos.`)
     } catch (error) {
       console.error('Error al generar PDF:', error)
-      alert('Error al generar el PDF. Por favor, intente nuevamente.')
+      // Mostrar modal de error
+      setModalLoading(false)
+      setModalTitle('Error en Exportación')
+      setModalContent('No se pudo generar el reporte PDF. Por favor, intente nuevamente.')
     }
   }
 
@@ -822,7 +870,16 @@ const Dashboard: React.FC = () => {
     // Contar alarmas por hora usando eventos filtrados
     events.forEach(event => {
       try {
-        const eventDate = new Date(event.timestamp)
+        // Parsear el timestamp en formato "14/09/25, 11:38:35" - mismo método que getFilteredEvents
+        const timestampStr = event.timestamp
+        const [datePart, timePart] = timestampStr.split(', ')
+        const [day, month, year] = datePart.split('/')
+        const [hours, minutes, seconds] = timePart.split(':')
+        
+        // Crear fecha con formato correcto (añadir 2000 al año de 2 dígitos)
+        const fullYear = `20${year}`
+        const eventDate = new Date(`${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hours}:${minutes}:${seconds}`)
+        
         const hour = eventDate.getHours()
         hourCounts[hour] = (hourCounts[hour] || 0) + 1
       } catch (error) {
@@ -991,7 +1048,7 @@ const Dashboard: React.FC = () => {
             </Grid>
             <Grid item xs={12} md={6}>
               <ResultsSummary
-                filteredEventsCount={filteredEvents.length}
+                filteredEventsCount={filteredEventsCount}
                 mostFrequentAlarm={mostFrequent ? { type: mostFrequent[0], count: mostFrequent[1] } : undefined}
                 videosRequested={currentReport.summary.videosRequested}
               />
@@ -1003,18 +1060,68 @@ const Dashboard: React.FC = () => {
             onExportExcel={exportToExcel}
             onExportPDF={exportToPDF}
             onSaveToDB={() => console.log('Guardar en BD')}
+            onRestart={() => {
+              // Limpiar el reporte actual y filtros
+              dispatch(clearCurrentReport())
+              setFilters({
+                tipo: [],
+                patente: '',
+                fechaInicio: '',
+                fechaFin: '',
+                comentario: '',
+              })
+              setSelectedCompany('')
+              setAvailableCompanies([])
+            }}
             selectedCompany={selectedCompany}
             availableCompanies={availableCompanies}
             onCompanyChange={setSelectedCompany}
           />
 
-          {/* Events Table */}
-          <EventsTable
-            events={filteredEvents}
-            getAlarmColor={getAlarmColor}
-          />
+      {/* Events Table */}
+      <EventsTable
+        events={filteredEvents}
+        getAlarmColor={getAlarmColor}
+      />
         </>
       )}
+      
+      {/* Modales */}
+      <Modal
+        open={uploadModalOpen}
+        onClose={() => setUploadModalOpen(false)}
+        title={modalTitle}
+        content={modalContent}
+        loading={modalLoading}
+      />
+      
+      <Modal
+        open={exportModalOpen}
+        onClose={() => setExportModalOpen(false)}
+        title={modalTitle}
+        content={modalContent}
+        loading={modalLoading}
+      />
+      
+      {/* Footer */}
+      <Box
+        component="footer"
+        sx={{
+          py: 2,
+          px: 3,
+          mt: 'auto',
+          borderTop: '1px solid rgba(0, 0, 0, 0.1)',
+          backgroundColor: 'background.paper',
+          textAlign: 'center'
+        }}
+      >
+        <Typography variant="body2" color="text.secondary">
+          © {new Date().getFullYear()} West Ingeniería - Sistema de Análisis de Alarmas
+        </Typography>
+        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+          Todos los derechos reservados
+        </Typography>
+      </Box>
     </Box>
   )
 }
