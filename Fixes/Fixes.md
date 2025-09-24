@@ -16,8 +16,8 @@
 # Proximos fixes planeados
 
 ## Frontend
-- Cambiar de lugar el footer, mejorar su visual, que esté estático en la sección inferior de la pantalla
+- Refinar filtros y su comportamiento
 
 
 ## Backend
-- El pdf generado no está mostrando los gráficos centrados en la hoja
+- Refinar comportamiendo de los endpoints y como se están guardando los reportes (por ahora se guardan los reportes de los archivos subidos y de los archivos generados, solo deben guardarse los subidos)

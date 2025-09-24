@@ -27,7 +27,7 @@ const Dashboard: React.FC = () => {
   const { currentReport, loading, error, reports } = useSelector((state: RootState) => state.excel)
   
   const [filters, setFilters] = useState({
-    tipo: [] as string[],
+    tipo: ['todos'] as string[],
     patente: '',
     fechaInicio: '',
     fechaFin: '',
@@ -151,7 +151,7 @@ const Dashboard: React.FC = () => {
       const fechaFinValida = !filters.fechaFin || eventDate <= new Date(filters.fechaFin + 'T23:59:59')
       
       return (
-        (filters.tipo.length === 0 || filters.tipo.includes(event.alarmType)) &&
+        (filters.tipo.length === 0 || filters.tipo.includes('todos') || filters.tipo.includes(event.alarmType)) &&
         (!filters.patente || event.vehiclePlate.toLowerCase().includes(filters.patente.toLowerCase())) &&
         fechaInicioValida &&
         fechaFinValida &&

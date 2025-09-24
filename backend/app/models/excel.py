@@ -32,6 +32,7 @@ class ProcessedReport(BaseModel):
     created_at: datetime = Field(default_factory=datetime.utcnow, description="Fecha de creación")
     updated_at: datetime = Field(default_factory=datetime.utcnow, description="Fecha de actualización")
     status: str = Field(default="processing", description="Estado del procesamiento")
+    operation: Optional[str] = Field(None, description="Operación realizada (created/updated)")
 
 class ChartData(BaseModel):
     labels: List[str] = Field(..., description="Etiquetas del gráfico")

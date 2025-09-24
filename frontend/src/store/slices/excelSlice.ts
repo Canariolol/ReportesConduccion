@@ -1,54 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
-import api from '../../services/api'
-
-// Types
-interface AlarmEvent {
-  timestamp: string
-  alarmType: string
-  vehiclePlate: string
-  driver: string
-  comments: string
-  severity: string
-}
-
-interface ChartData {
-  alarmTypeDistribution: {
-    labels: string[]
-    data: number[]
-    backgroundColor: string[]
-  }
-  dailyEvolution: {
-    labels: string[]
-    data: number[]
-  }
-  hourlyDistribution: {
-    labels: string[]
-    data: number[]
-  }
-}
-
-interface ReportSummary {
-  totalAlarms: number
-  alarmTypes: Record<string, number>
-  videosRequested: number
-}
-
-interface ProcessedReport {
-  id: string
-  user_id: string
-  file_name: string
-  vehicle_plate: string
-  date_range: {
-    start: string
-    end: string
-  }
-  summary: ReportSummary
-  events: AlarmEvent[]
-  charts: ChartData
-  created_at: string
-  updated_at: string
-  status: string
-}
+import excelService, { ProcessedReport, BatchDeleteRequest, BatchDeleteResponse, FilenameDeleteResponse } from '../../services/excel'
 
 interface ExcelState {
   currentReport: ProcessedReport | null
@@ -69,15 +20,12 @@ export const uploadExcel = createAsyncThunk(
   'excel/uploadExcel',
   async (formData: FormData, { rejectWithValue }) => {
     try {
-      console.log('Attempting to upload to v1/upload'); // Log para depuración
-      const response = await api.post('v1/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      })
-      return response.data
+      const file = formData.get('file') as File
+      const userId = formData.get('user_id') as string
+      const response = await excelService.uploadExcelUpsert(file, userId)
+      return response
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.error?.message || 'Error al subir archivo')
+      return rejectWithValue(error.response?.data?.detail || error.message || 'Error al subir archivo')
     }
   }
 )
@@ -86,10 +34,10 @@ export const getReports = createAsyncThunk(
   'excel/getReports',
   async (userId: string = 'demo_user', { rejectWithValue }) => {
     try {
-      const response = await api.get(`v1/reports?user_id=${userId}`)
-      return response.data
+      const response = await excelService.getUserReports(userId)
+      return response
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.error?.message || 'Error al obtener reportes')
+      return rejectWithValue(error.response?.data?.detail || error.message || 'Error al obtener reportes')
     }
   }
 )
@@ -98,10 +46,10 @@ export const getReport = createAsyncThunk(
   'excel/getReport',
   async (reportId: string, { rejectWithValue }) => {
     try {
-      const response = await api.get(`v1/reports/${reportId}`)
-      return response.data
+      const response = await excelService.getReport(reportId)
+      return response
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.error?.message || 'Error al obtener reporte')
+      return rejectWithValue(error.response?.data?.detail || error.message || 'Error al obtener reporte')
     }
   }
 )
@@ -110,10 +58,59 @@ export const deleteReport = createAsyncThunk(
   'excel/deleteReport',
   async (reportId: string, { rejectWithValue }) => {
     try {
-      await api.delete(`v1/reports/${reportId}`)
+      await excelService.deleteReport(reportId)
       return reportId
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.error?.message || 'Error al eliminar reporte')
+      return rejectWithValue(error.response?.data?.detail || error.message || 'Error al eliminar reporte')
+    }
+  }
+)
+
+// Nuevos async thunks para las funcionalidades solicitadas
+export const uploadExcelUpsert = createAsyncThunk(
+  'excel/uploadExcelUpsert',
+  async ({ file, userId }: { file: File; userId: string }, { rejectWithValue }) => {
+    try {
+      const response = await excelService.uploadExcelUpsert(file, userId)
+      return response
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.detail || error.message || 'Error al subir archivo')
+    }
+  }
+)
+
+export const batchDeleteReports = createAsyncThunk(
+  'excel/batchDeleteReports',
+  async (request: BatchDeleteRequest, { rejectWithValue }) => {
+    try {
+      const response = await excelService.batchDeleteReports(request)
+      return response
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.detail || error.message || 'Error al eliminar reportes')
+    }
+  }
+)
+
+export const deleteReportsByFilename = createAsyncThunk(
+  'excel/deleteReportsByFilename',
+  async ({ filename, userId }: { filename: string; userId: string }, { rejectWithValue }) => {
+    try {
+      const response = await excelService.deleteReportsByFilename(filename, userId)
+      return response
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.detail || error.message || 'Error al eliminar reportes por nombre de archivo')
+    }
+  }
+)
+
+export const getReportByFilename = createAsyncThunk(
+  'excel/getReportByFilename',
+  async ({ filename, userId }: { filename: string; userId: string }, { rejectWithValue }) => {
+    try {
+      const response = await excelService.getReportByFilename(filename, userId)
+      return response
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.detail || error.message || 'Error al obtener reporte por nombre de archivo')
     }
   }
 )
@@ -139,7 +136,14 @@ const excelSlice = createSlice({
       .addCase(uploadExcel.fulfilled, (state, action: PayloadAction<ProcessedReport>) => {
         state.loading = false
         state.currentReport = action.payload
-        state.reports.unshift(action.payload)
+        
+        // Si es una actualización, reemplazar el reporte existente
+        const existingIndex = state.reports.findIndex(report => report.id === action.payload.id)
+        if (existingIndex !== -1) {
+          state.reports[existingIndex] = action.payload
+        } else {
+          state.reports.unshift(action.payload)
+        }
       })
       .addCase(uploadExcel.rejected, (state, action) => {
         state.loading = false
@@ -184,6 +188,79 @@ const excelSlice = createSlice({
         }
       })
       .addCase(deleteReport.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload as string
+      })
+      // Upload Excel Upsert (nuevo)
+      .addCase(uploadExcelUpsert.pending, (state) => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(uploadExcelUpsert.fulfilled, (state, action: PayloadAction<ProcessedReport>) => {
+        state.loading = false
+        state.currentReport = action.payload
+        
+        // Si es una actualización, reemplazar el reporte existente
+        const existingIndex = state.reports.findIndex(report => report.id === action.payload.id)
+        if (existingIndex !== -1) {
+          state.reports[existingIndex] = action.payload
+        } else {
+          state.reports.unshift(action.payload)
+        }
+      })
+      .addCase(uploadExcelUpsert.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload as string
+      })
+      // Batch Delete Reports (nuevo)
+      .addCase(batchDeleteReports.pending, (state) => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(batchDeleteReports.fulfilled, (state, action: PayloadAction<BatchDeleteResponse>) => {
+        state.loading = false
+        if (action.payload.success) {
+          // Por ahora, simplemente recargamos los reportes ya que el batch delete no devuelve los IDs eliminados
+          // En una implementación más avanzada, podrías modificar el backend para devolver los IDs eliminados
+          state.reports = state.reports // Mantenemos el estado actual, el frontend debería recargar
+        }
+      })
+      .addCase(batchDeleteReports.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload as string
+      })
+      // Delete Reports by Filename (nuevo)
+      .addCase(deleteReportsByFilename.pending, (state) => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(deleteReportsByFilename.fulfilled, (state, action: PayloadAction<FilenameDeleteResponse>) => {
+        state.loading = false
+        if (action.payload.success) {
+          const filename = action.payload.filename
+          // Eliminar reportes con ese filename
+          state.reports = state.reports.filter(report => report.file_name !== filename)
+          
+          // Limpiar currentReport si tiene ese filename
+          if (state.currentReport?.file_name === filename) {
+            state.currentReport = null
+          }
+        }
+      })
+      .addCase(deleteReportsByFilename.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload as string
+      })
+      // Get Report by Filename (nuevo)
+      .addCase(getReportByFilename.pending, (state) => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(getReportByFilename.fulfilled, (state, action: PayloadAction<ProcessedReport | null>) => {
+        state.loading = false
+        state.currentReport = action.payload
+      })
+      .addCase(getReportByFilename.rejected, (state, action) => {
         state.loading = false
         state.error = action.payload as string
       })

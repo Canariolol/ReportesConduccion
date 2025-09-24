@@ -56,9 +56,32 @@ const Filters: React.FC<FiltersProps> = ({ filters, alarmTypes, vehiclePlate, on
                 labelId="tipo-alarma-label"
                 multiple
                 value={filters.tipo}
-                onChange={(e) => onFilterChange('tipo', e.target.value)}
+                onChange={(e) => {
+                  const selectedValues = e.target.value as string[];
+                  
+                  // Si se selecciona "todos", manejar la lógica especial
+                  if (selectedValues.includes('todos')) {
+                    // Si "todos" ya estaba seleccionado, deseleccionarlo y seleccionar todos los tipos individuales
+                    if (filters.tipo.includes('todos')) {
+                      // Deseleccionar "todos" y seleccionar todos los tipos individuales
+                      onFilterChange('tipo', alarmTypes);
+                    } else {
+                      // Seleccionar "todos" y deseleccionar todo lo demás
+                      onFilterChange('tipo', ['todos']);
+                    }
+                  } else {
+                    // Si no se seleccionó "todos", simplemente actualizar los valores
+                    onFilterChange('tipo', selectedValues);
+                  }
+                }}
                 input={<OutlinedInput label="Tipo de Alarma" />}
                 sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                renderValue={(selected) => {
+                  if (selected.length === 0 || selected.includes('todos')) {
+                    return 'Todos los tipos';
+                  }
+                  return selected.join(', ');
+                }}
               >
                 <MenuItem value="todos">
                   <em>Todos los tipos</em>
