@@ -61,8 +61,7 @@ const Login: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        bgcolor: 'background.default',
-        backgroundImage: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        bgcolor: 'transparent',
       }}
     >
       <Card sx={{ maxWidth: 400, width: '100%', mx: 3 }}>

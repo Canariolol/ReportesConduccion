@@ -15,7 +15,7 @@ export const theme = createTheme({
       contrastText: '#ffffff',
     },
     background: {
-      default: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 50%, #90caf9 100%)',
+      default: 'transparent',
       paper: 'rgba(255, 255, 255, 0.95)',
     },
     text: {

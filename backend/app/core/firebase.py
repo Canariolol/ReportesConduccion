@@ -113,6 +113,11 @@ class FirebaseManager:
                 'storageBucket': f'{settings.FIREBASE_PROJECT_ID}.appspot.com'
             })
             logger.info("✅ Firebase app inicializada con variables de entorno")
+            
+            # Inicializar db y storage después de la inicialización
+            self.db = firestore.client()
+            self.storage = storage.bucket()
+            logger.info("✅ Firestore y Storage inicializados con variables de entorno")
         except Exception as e:
             logger.error(f"❌ Error al inicializar Firebase con variables de entorno: {str(e)}")
             raise

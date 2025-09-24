@@ -5,6 +5,7 @@ import { Provider } from 'react-redux'
 import { store } from './store/store.ts'
 import { ThemeProvider, createTheme } from '@mui/material/styles'
 import CssBaseline from '@mui/material/CssBaseline'
+import './index.css'
 
 // Define custom theme
 const theme = createTheme({
