@@ -73,16 +73,20 @@ class FirebaseManager:
                 logger.error(f"❌ Error al inicializar Firebase app: {str(e)}")
                 raise
         
-        self.db = firestore.client()
-        self.storage = storage.bucket()
-        logger.info("🎉 Firebase Manager inicializado completamente")
+        try:
+            self.db = firestore.client()
+            self.storage = storage.bucket()
+            logger.info("🎉 Firebase Manager inicializado completamente")
+        except Exception as e:
+            logger.error(f"❌ Error al inicializar Firestore y Storage: {str(e)}")
+            raise
     
     def _use_environment_variables(self):
         """Usar variables de entorno como fallback"""
-        logger.info("📝 Configurando credenciales desde variables de entorno...")
+        logger.info("� Configurando credenciales desde variables de entorno...")
         
         private_key_env = settings.FIREBASE_PRIVATE_KEY
-        logger.info(f"📋 Longitud de la clave privada: {len(private_key_env)} caracteres")
+        logger.info(f"� Longitud de la clave privada: {len(private_key_env)} caracteres")
         
         if private_key_env.startswith('"') and private_key_env.endswith('"'):
             private_key_env = private_key_env[1:-1]
@@ -131,7 +135,7 @@ class FirebaseManager:
 # Global Firebase instance
 try:
     firebase_manager = FirebaseManager()
-    logger.info("🌟 Firebase Manager global creado exitosamente")
+    logger.info("� Firebase Manager global creado exitosamente")
 except Exception as e:
     logger.error(f"💥 Error crítico al crear Firebase Manager: {str(e)}")
     raise

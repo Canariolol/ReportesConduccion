@@ -126,3 +126,4 @@ DEPLOY_COMMANDS.md
 .contexto/README.md
 frontend/src/pages/Dashboard.tsx
 backend/logFirestoreError.txt
+ReportesConduccion.code-workspace

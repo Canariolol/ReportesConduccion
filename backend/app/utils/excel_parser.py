@@ -23,9 +23,17 @@ class ExcelParser:
     def parse_excel_file(self, file_content: bytes, filename: str) -> ExcelData:
         """Parse Excel file and return structured data"""
         try:
-            # Read Excel file
-            df_summary = pd.read_excel(file_content, sheet_name='Hoja1' or 'Hoja2', header=None)
-            df_videos = pd.read_excel(file_content, sheet_name='Vídeos', header=None)
+            # Use pd.ExcelFile to be able to get sheet names
+            excel_file = pd.ExcelFile(file_content)
+            sheet_names = excel_file.sheet_names
+
+            # Ensure there are at least two sheets
+            if len(sheet_names) < 2:
+                raise ValueError("El archivo Excel debe contener al menos dos hojas.")
+
+            # Read the first sheet for summary and the second for videos
+            df_summary = excel_file.parse(sheet_names[0], header=None)
+            df_videos = excel_file.parse(sheet_names[1], header=None)
             
             # Parse summary data
             summary_data = self._parse_summary(df_summary)

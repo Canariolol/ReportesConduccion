@@ -53,7 +53,7 @@ class ExcelService:
         """Get report by ID from Firestore"""
         try:
             doc_ref = self.db.collection('reports').document(report_id)
-            doc = await doc_ref.get()
+            doc = doc_ref.get()
             
             if doc.exists:
                 data = doc.to_dict()
@@ -70,7 +70,7 @@ class ExcelService:
                     .order_by('created_at', direction='DESCENDING')
                     .limit(limit))
             
-            docs = await query.get()
+            docs = query.stream()
             reports = []
             
             for doc in docs:
@@ -86,7 +86,7 @@ class ExcelService:
         """Delete report by ID"""
         try:
             doc_ref = self.db.collection('reports').document(report_id)
-            await doc_ref.delete()
+            doc_ref.delete()
             return True
         except Exception as e:
             raise ValueError(f"Error deleting report: {str(e)}")
@@ -97,13 +97,14 @@ class ExcelService:
             query = (self.db.collection('reports')
                     .where('user_id', '==', user_id))
             
-            docs = await query.get()
+            docs = query.stream()
             
-            total_reports = len(docs)
+            total_reports = 0
             total_alarms = 0
             total_vehicles = set()
             
             for doc in docs:
+                total_reports += 1
                 data = doc.to_dict()
                 total_alarms += data.get('summary', {}).get('totalAlarms', 0)
                 vehicle_plate = data.get('vehicle_plate', '')
