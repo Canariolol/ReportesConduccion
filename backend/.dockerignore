@@ -44,6 +44,7 @@ Thumbs.db
 
 # Environment variables (se manejarán como secretos en Cloud Run)
 .env
+serviceAccount.json
 
 # Archivos temporales
 tmp/
