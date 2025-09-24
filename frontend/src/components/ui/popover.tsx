@@ -17,6 +17,7 @@ const PopoverTrigger = AriaDialogTrigger
 const Popover = ({ className, offset = 4, ...props }: AriaPopoverProps) => (
   <AriaPopover
     offset={offset}
+    placement="bottom"
     className={composeRenderProps(className, (className) =>
       cn(
         "z-[9999] rounded-lg border border-gray-200 bg-white shadow-xl outline-none",

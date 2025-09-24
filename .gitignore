@@ -127,3 +127,6 @@ DEPLOY_COMMANDS.md
 frontend/src/pages/Dashboard.tsx
 backend/logFirestoreError.txt
 ReportesConduccion.code-workspace
+referenciaFechas.png
+referenciaHoja1.png
+referenciaHoja2.png

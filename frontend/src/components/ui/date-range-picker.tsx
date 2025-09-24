@@ -1,206 +1,86 @@
-"use client"
+'use client'
 
-import React, { useState } from 'react'
-import { CalendarIcon } from "lucide-react"
+import * as React from "react"
 import { format } from "date-fns"
-import { es } from 'date-fns/locale'
-import { 
-  Box, 
-  Popover, 
-  Button, 
-  Card,
-  CardContent,
-  IconButton,
-  Stack,
-  Typography
-} from '@mui/material'
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
-import { StaticDatePicker } from '@mui/x-date-pickers/StaticDatePicker'
+import { es } from "date-fns/locale"
+import { Calendar as CalendarIcon } from "lucide-react"
+import { DateRange } from "react-day-picker"
 
-interface DateRange {
-  from: Date | undefined
-  to?: Date | undefined
-}
+import { Button, Popover } from '@mui/material'
+import { Calendar } from "./calendar"
 
 interface DateRangePickerProps {
-  selected?: DateRange
-  onSelect?: (range: DateRange | undefined) => void
-  placeholder?: string
+  date: DateRange | undefined
+  onDateChange: (date: DateRange | undefined) => void
   className?: string
-  disabled?: boolean
 }
 
-function DateRangePicker({
-  selected,
-  onSelect,
-  placeholder = "Seleccionar rango de fechas",
-  className,
-  disabled = false,
-}: DateRangePickerProps) {
-  const [open, setOpen] = useState(false)
-  const [tempRange, setTempRange] = useState<DateRange | undefined>(selected)
-  const [selectingStart, setSelectingStart] = useState(true)
+export default function DateRangePicker({ date, onDateChange, className }: DateRangePickerProps) {
+  const [anchorEl, setAnchorEl] = React.useState<HTMLButtonElement | null>(null);
 
-  const handleDateSelect = (date: Date | null) => {
-    if (!date) return
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
 
-    if (selectingStart) {
-      setTempRange({
-        from: date,
-        to: undefined
-      })
-      setSelectingStart(false)
-    } else {
-      setTempRange(prev => ({
-        from: prev?.from,
-        to: date
-      }))
-    }
-  }
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
 
-  const handleConfirm = () => {
-    if (tempRange?.from && tempRange?.to) {
-      onSelect?.(tempRange)
-    }
-    setOpen(false)
-    setSelectingStart(true)
-  }
-
-  const handleCancel = () => {
-    setTempRange(selected)
-    setOpen(false)
-    setSelectingStart(true)
-  }
-
-  const formatDateRange = (range: DateRange | undefined) => {
-    if (!range?.from) return placeholder
-    if (!range.to) return format(range.from, "dd-MM-yyyy", { locale: es })
-    return `${format(range.from, "dd-MM-yyyy", { locale: es })} - ${format(range.to, "dd-MM-yyyy", { locale: es })}`
-  }
+  const open = Boolean(anchorEl);
+  const id = open ? 'date-range-popover' : undefined;
 
   return (
-    <Box className={className}>
+    <div className={className}>
+      <Button
+        id="date"
+        variant="outlined"
+        onClick={handleClick}
+        sx={{
+          width: '100%',
+          justifyContent: 'flex-start',
+          textAlign: 'left',
+          fontWeight: 'normal',
+          textTransform: 'none',
+          color: date ? 'inherit' : 'text.secondary',
+          borderColor: 'rgba(0, 0, 0, 0.23)',
+          '&:hover': {
+            borderColor: 'rgba(0, 0, 0, 0.87)',
+          },
+        }}
+      >
+        <CalendarIcon style={{ marginRight: '8px', height: '16px', width: '16px' }} />
+        {date?.from ? (
+          date.to ? (
+            <>
+              {format(date.from, "dd-MM-yyyy", { locale: es })} -{" "}
+              {format(date.to, "dd-MM-yyyy", { locale: es })}
+            </>
+          ) : (
+            format(date.from, "dd-MM-yyyy", { locale: es })
+          )
+        ) : (
+          <span>dd-mm-yyyy - dd-mm-yyyy</span>
+        )}
+      </Button>
       <Popover
+        id={id}
         open={open}
-        onClose={handleCancel}
+        anchorEl={anchorEl}
+        onClose={handleClose}
         anchorOrigin={{
           vertical: 'bottom',
-          horizontal: 'right',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'right',
-        }}
-        PaperProps={{
-          sx: {
-            mt: 1,
-            border: '1px solid rgba(0, 0, 0, 0.23)',
-            borderRadius: 2,
-            boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-            overflow: 'hidden',
-            width: 320
-          }
+          horizontal: 'left',
         }}
       >
-        <Card sx={{ border: 'none', boxShadow: 'none' }}>
-          <CardContent sx={{ p: 3 }}>
-            <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={es}>
-              <Stack spacing={2}>
-                <Box>
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 500, fontSize: '0.875rem' }}>
-                    {selectingStart ? 'Fecha inicio' : 'Fecha término'}
-                  </Typography>
-                  <StaticDatePicker
-                    displayStaticWrapperAs="desktop"
-                    value={selectingStart ? tempRange?.from || null : tempRange?.to || null}
-                    onChange={handleDateSelect}
-                    maxDate={selectingStart ? undefined : tempRange?.from}
-                    minDate={selectingStart ? tempRange?.to : undefined}
-                    sx={{
-                      '& .MuiPickersCalendar-root': {
-                        minHeight: 280
-                      },
-                      '& .MuiPickersDay-root': {
-                        borderRadius: 1,
-                        fontSize: '0.875rem',
-                        height: 32,
-                        width: 32,
-                        '&.Mui-selected': {
-                          backgroundColor: 'primary.main',
-                          '&:hover': {
-                            backgroundColor: 'primary.dark',
-                          }
-                        }
-                      },
-                      '& .MuiPickersCalendarHeader-label': {
-                        fontSize: '0.875rem'
-                      },
-                      '& .MuiPickersArrowSwitcher-button': {
-                        padding: 0
-                      }
-                    }}
-                  />
-                </Box>
-                
-                {tempRange?.from && (
-                  <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-                    <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>
-                      Inicio: <strong>{format(tempRange.from, "dd-MM-yyyy", { locale: es })}</strong>
-                    </Typography>
-                    {tempRange?.to && (
-                      <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1, fontSize: '0.75rem' }}>
-                        Término: <strong>{format(tempRange.to, "dd-MM-yyyy", { locale: es })}</strong>
-                      </Typography>
-                    )}
-                  </Box>
-                )}
-                
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 1 }}>
-                  <Button 
-                    onClick={handleCancel}
-                    size="small"
-                    variant="outlined"
-                    sx={{ borderRadius: 1, fontSize: '0.75rem' }}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button 
-                    onClick={() => {
-                      if (tempRange?.from && !tempRange?.to) {
-                        setSelectingStart(false)
-                      } else if (tempRange?.from && tempRange?.to) {
-                        handleConfirm()
-                      }
-                    }}
-                    size="small"
-                    variant="contained"
-                    sx={{ borderRadius: 1, fontSize: '0.75rem' }}
-                    disabled={!tempRange?.from}
-                  >
-                    {tempRange?.from && !tempRange?.to ? 'Siguiente' : 'Listo'}
-                  </Button>
-                </Box>
-              </Stack>
-            </LocalizationProvider>
-          </CardContent>
-        </Card>
+        <Calendar
+          initialFocus
+          mode="range"
+          defaultMonth={date?.from}
+          selected={date}
+          onSelect={onDateChange}
+          numberOfMonths={1}
+        />
       </Popover>
-
-      <IconButton
-        onClick={() => setOpen(true)}
-        disabled={disabled}
-        size="small"
-        sx={{
-          '&:hover': {
-            backgroundColor: 'rgba(0, 0, 0, 0.04)',
-          }
-        }}
-      >
-        <CalendarIcon style={{ fontSize: 20 }} />
-      </IconButton>
-    </Box>
+    </div>
   )
 }
-
-export default DateRangePicker

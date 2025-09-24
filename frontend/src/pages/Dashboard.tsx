@@ -1,30 +1,31 @@
-import React, { useState, useCallback, useRef } from 'react'
-import { Box, Grid, CircularProgress, Alert, Typography } from '@mui/material'
-import { useDispatch, useSelector } from 'react-redux'
-import { AppDispatch, RootState } from '../store/store.ts'
-import { uploadExcel, getReports, clearCurrentReport } from '../store/slices/excelSlice.ts'
-import { format } from 'date-fns'
-import Modal from '../components/ui/Modal.tsx'
+import React, { useState, useCallback, useRef } from 'react';
+import { Box, Grid, CircularProgress, Alert, Typography } from '@mui/material';
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch, RootState } from '../store/store.ts';
+import { uploadExcel, getReports, clearCurrentReport } from '../store/slices/excelSlice.ts';
+import { format } from 'date-fns';
+import { DateRange } from 'react-day-picker';
+import Modal from '../components/ui/Modal.tsx';
 
 // Componentes especializados
-import Header from '../components/Dashboard/Header.tsx'
-import UploadSection from '../components/Dashboard/UploadSection.tsx'
-import MetricsCards from '../components/Dashboard/MetricsCards.tsx'
-import PieChartComponent from '../components/Dashboard/PieChart.tsx'
-import AreaChartComponent from '../components/Dashboard/AreaChart.tsx'
-import LineChartComponent from '../components/Dashboard/LineChart.tsx'
-import Filters from '../components/Dashboard/Filters.tsx'
-import ResultsSummary from '../components/Dashboard/ResultsSummary.tsx'
-import ExportButtons from '../components/Dashboard/ExportButtons.tsx'
-import EventsTable from '../components/Dashboard/EventsTable.tsx'
+import Header from '../components/Dashboard/Header.tsx';
+import UploadSection from '../components/Dashboard/UploadSection.tsx';
+import MetricsCards from '../components/Dashboard/MetricsCards.tsx';
+import PieChartComponent from '../components/Dashboard/PieChart.tsx';
+import AreaChartComponent from '../components/Dashboard/AreaChart.tsx';
+import LineChartComponent from '../components/Dashboard/LineChart.tsx';
+import Filters from '../components/Dashboard/Filters.tsx';
+import ResultsSummary from '../components/Dashboard/ResultsSummary.tsx';
+import ExportButtons from '../components/Dashboard/ExportButtons.tsx';
+import EventsTable from '../components/Dashboard/EventsTable.tsx';
 
 // Utilidades de exportación
-import { captureChartAsImage, getAlarmColor, formatTimestamp } from '../components/Dashboard/ExportUtils.tsx'
-import { applyEnhancedStyles, addEnhancedMetricsTable, createEnhancedWorksheet, WEST_COLORS, FONT_STYLES } from '../components/Dashboard/ExcelStyleUtils.tsx'
+import { captureChartAsImage, getAlarmColor, formatTimestamp } from '../components/Dashboard/ExportUtils.tsx';
+import { applyEnhancedStyles } from '../components/Dashboard/ExcelStyleUtils.tsx';
 
 const Dashboard: React.FC = () => {
-  const dispatch = useDispatch<AppDispatch>()
-  const { currentReport, loading, error, reports } = useSelector((state: RootState) => state.excel)
+  const dispatch = useDispatch<AppDispatch>();
+  const { currentReport, loading, error, reports } = useSelector((state: RootState) => state.excel);
   
   const [filters, setFilters] = useState({
     tipo: ['todos'] as string[],
@@ -32,20 +33,20 @@ const Dashboard: React.FC = () => {
     fechaInicio: '',
     fechaFin: '',
     comentario: '',
-  })
+  });
   
-  const [selectedCompany, setSelectedCompany] = useState<string>('')
-  const [availableCompanies, setAvailableCompanies] = useState<string[]>([])
+  const [selectedCompany, setSelectedCompany] = useState<string>('');
+  const [availableCompanies, setAvailableCompanies] = useState<string[]>([]);
   
   // Estados para modales
-  const [uploadModalOpen, setUploadModalOpen] = useState(false)
-  const [exportModalOpen, setExportModalOpen] = useState(false)
-  const [modalTitle, setModalTitle] = useState('')
-  const [modalContent, setModalContent] = useState('')
-  const [modalLoading, setModalLoading] = useState(false)
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [modalTitle, setModalTitle] = useState('');
+  const [modalContent, setModalContent] = useState('');
+  const [modalLoading, setModalLoading] = useState(false);
   
   // Estado para conteo de eventos filtrados
-  const [filteredEventsCount, setFilteredEventsCount] = useState(0)
+  const [filteredEventsCount, setFilteredEventsCount] = useState(0);
   
   // Función para transformar nombres de empresas
   const transformCompanyName = (companyName: string): string => {
@@ -53,102 +54,125 @@ const Dashboard: React.FC = () => {
       'TPF': 'TRANS PACIFIC FIBRE SA',
       'Bosque Los Lagos': 'BOSQUES LOS LAGOS SPA',
       'Llico': 'SOC. DE TRANSP. LLICO LTDA.'
-    }
+    };
     
-    return companyMap[companyName] || companyName
-  }
+    return companyMap[companyName] || companyName;
+  };
   
   // Función para extraer empresas de los datos del conductor
   const extractCompaniesFromData = () => {
-    if (!currentReport) return []
+    if (!currentReport) return [];
     
-    const companies = new Set<string>()
-    const validCompanies = ['Bosque Los Lagos', 'TPF', 'Llico']
+    const companies = new Set<string>();
+    const validCompanies = ['Bosque Los Lagos', 'TPF', 'Llico'];
     
     currentReport.events.forEach(event => {
       if (event.driver) {
         // Buscar empresas entre paréntesis en el nombre del conductor
-        const match = event.driver.match(/\(([^)]+)\)/)
+        const match = event.driver.match(/\(([^)]+)\)/);
         if (match) {
-          const company = match[1].trim()
+          const company = match[1].trim();
           if (validCompanies.includes(company)) {
-            companies.add(company)
+            companies.add(company);
           }
         }
       }
-    })
+    });
     
-    return Array.from(companies)
-  }
+    return Array.from(companies);
+  };
   
   // Función para obtener el nombre completo de la empresa del evento
   const getEventCompanyName = (event: any): string => {
-    if (!event.driver) return 'Sin empresa'
+    if (!event.driver) return 'Sin empresa';
     
     // Buscar empresas entre paréntesis en el nombre del conductor
-    const match = event.driver.match(/\(([^)]+)\)/)
+    const match = event.driver.match(/\(([^)]+)\)/);
     if (match) {
-      const company = match[1].trim()
-      return transformCompanyName(company)
+      const company = match[1].trim();
+      return transformCompanyName(company);
     }
     
-    return 'Sin empresa'
-  }
+    return 'Sin empresa';
+  };
   
   // Actualizar empresas disponibles cuando cambie el reporte
   React.useEffect(() => {
     if (currentReport) {
-      const companies = extractCompaniesFromData()
-      const transformedCompanies = companies.map(transformCompanyName)
-      setAvailableCompanies(transformedCompanies)
+      const companies = extractCompaniesFromData();
+      const transformedCompanies = companies.map(transformCompanyName);
+      setAvailableCompanies(transformedCompanies);
       if (transformedCompanies.length > 0 && !selectedCompany) {
-        setSelectedCompany(transformedCompanies[0])
+        setSelectedCompany(transformedCompanies[0]);
       }
     }
-  }, [currentReport])
+  }, [currentReport]);
   
   // Actualizar conteo de eventos filtrados cuando cambien los filtros
   React.useEffect(() => {
     if (currentReport) {
-      const count = getFilteredEvents().length
-      setFilteredEventsCount(count)
+      const count = getFilteredEvents().length;
+      setFilteredEventsCount(count);
     }
-  }, [filters, currentReport])
+  }, [filters, currentReport]);
 
   // Refs para los gráficos
-  const pieChartRef = useRef<HTMLDivElement>(null)
-  const areaChartRef = useRef<HTMLDivElement>(null)
-  const barChartRef = useRef<HTMLDivElement>(null)
-  const lineChartRef = useRef<HTMLDivElement>(null)
+  const pieChartRef = useRef<HTMLDivElement>(null);
+  const areaChartRef = useRef<HTMLDivElement>(null);
+  const barChartRef = useRef<HTMLDivElement>(null);
+  const lineChartRef = useRef<HTMLDivElement>(null);
 
-  const handleFilterChange = (field: string, value: string | string[]) => {
-    setFilters(prev => ({ ...prev, [field]: value }))
-  }
+  const handleFilterChange = (field: string, value: any) => {
+    if (field === 'dateRange') {
+      const dateRange = value as DateRange | undefined;
+      setFilters(prev => ({
+        ...prev,
+        fechaInicio: dateRange?.from ? format(dateRange.from, 'dd-MM-yyyy') : '',
+        fechaFin: dateRange?.to ? format(dateRange.to, 'dd-MM-yyyy') : '',
+      }));
+    } else {
+      setFilters(prev => ({ ...prev, [field]: value }));
+    }
+  };
 
   const getFilteredEvents = () => {
-    if (!currentReport) return []
+    if (!currentReport) return [];
+
+    const parseDate = (dateString: string): Date | null => {
+        if (!dateString) return null;
+        const parts = dateString.split('-');
+        if (parts.length === 3) {
+            const [day, month, year] = parts.map(Number);
+            if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
+                return new Date(year, month - 1, day);
+            }
+        }
+        const parsedDate = new Date(dateString);
+        return isNaN(parsedDate.getTime()) ? null : parsedDate;
+    };
     
     return currentReport.events.filter(event => {
-      // Parsear el timestamp del evento
-      let eventDate: Date | null = null
+      let eventDate: Date | null = null;
       try {
-        // Parsear el timestamp en formato "14/09/25, 11:38:35"
-        const timestampStr = event.timestamp
-        const [datePart, timePart] = timestampStr.split(', ')
-        const [day, month, year] = datePart.split('/')
-        const [hours, minutes, seconds] = timePart.split(':')
-        
-        // Crear fecha con formato correcto (añadir 2000 al año de 2 dígitos)
-        const fullYear = `20${year}`
-        eventDate = new Date(`${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hours}:${minutes}:${seconds}`)
+        const timestampStr = event.timestamp;
+        const [datePart, timePart] = timestampStr.split(', ');
+        const [day, month, year] = datePart.split('/');
+        const [hours, minutes, seconds] = timePart.split(':');
+        const fullYear = `20${year}`;
+        eventDate = new Date(`${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hours}:${minutes}:${seconds}`);
       } catch (error) {
-        console.error('Error parsing timestamp:', event.timestamp, error)
-        return false // Excluir eventos con fechas inválidas
+        console.error('Error parsing timestamp:', event.timestamp, error);
+        return false;
       }
       
-      // Comparar fechas - CORREGIDO: Ajustar para problemas de zona horaria
-      const fechaInicioValida = !filters.fechaInicio || eventDate >= new Date(filters.fechaInicio + 'T00:00:00')
-      const fechaFinValida = !filters.fechaFin || eventDate <= new Date(filters.fechaFin + 'T23:59:59')
+      const startDate = parseDate(filters.fechaInicio);
+      const endDate = parseDate(filters.fechaFin);
+
+      if (startDate) startDate.setHours(0, 0, 0, 0);
+      if (endDate) endDate.setHours(23, 59, 59, 999);
+
+      const fechaInicioValida = !startDate || eventDate >= startDate;
+      const fechaFinValida = !endDate || eventDate <= endDate;
       
       return (
         (filters.tipo.length === 0 || filters.tipo.includes('todos') || filters.tipo.includes(event.alarmType)) &&
@@ -156,258 +180,227 @@ const Dashboard: React.FC = () => {
         fechaInicioValida &&
         fechaFinValida &&
         (!filters.comentario || (event.comments && event.comments.toLowerCase().includes(filters.comentario.toLowerCase())))
-      )
-    })
-  }
+      );
+    });
+  };
 
   const exportToExcel = () => {
-    if (!currentReport) return
-    
-    // Mostrar modal de carga
-    setModalTitle('Exportando a Excel')
-    setModalContent('Generando reporte de Excel con diseño mejorado...')
-    setModalLoading(true)
-    setExportModalOpen(true)
-    
-    // Importación dinámica para evitar errores de compilación
+    if (!currentReport) return;
+
+    setModalTitle('Exportando a Excel');
+    setModalContent('Generando reporte de Excel con el formato profesional...');
+    setModalLoading(true);
+    setExportModalOpen(true);
+
     import('xlsx').then(XLSX => {
-      const filteredEvents = getFilteredEvents()
-      const workbook = XLSX.utils.book_new()
-      
-      // 1. Crear hoja de resumen con diseño mejorado
-      const summaryData = [
-        // Información del reporte
-        ['Empresa', selectedCompany || 'N/A'],
-        ['Vehículo', currentReport.vehicle_plate],
-        ['Archivo', currentReport.file_name],
-        ['Fecha de Exportación', format(new Date(), 'dd/MM/yyyy HH:mm')]
-      ]
-      
-      // Crear hoja de resumen con diseño mejorado
-      const summaryWorksheet = createEnhancedWorksheet(
-        [],
-        'Reporte de Alarmas de Conducción',
-        ['Información del Reporte']
-      )
-      
-      // Agregar información del reporte
-      summaryData.forEach((info, index) => {
-        const labelCellAddress = XLSX.utils.encode_cell({ r: 3 + index, c: 0 })
-        const valueCellAddress = XLSX.utils.encode_cell({ r: 3 + index, c: 1 })
-        
-        summaryWorksheet[labelCellAddress] = { v: info[0], s: FONT_STYLES.infoLabel }
-        summaryWorksheet[valueCellAddress] = { v: info[1], s: FONT_STYLES.infoValue }
-      })
-      
-      // Agregar espacio y título de métricas
-      const metricsTitleCellAddress = XLSX.utils.encode_cell({ r: 8, c: 0 })
-      summaryWorksheet[metricsTitleCellAddress] = { v: 'Resumen de Métricas', s: FONT_STYLES.subtitle }
-      
-      // Agregar tabla de métricas con diseño mejorado
-      let metricsData: [string, string][] = [
-        ['Total de Alarmas', currentReport.summary.totalAlarms.toString()],
-        ['Tipos de Alarma', Object.keys(currentReport.summary.alarmTypes).length.toString()],
-        ['Eventos Filtrados', filteredEvents.length.toString()]
-      ]
-      
-      // Solo incluir Videos Solicitados si es mayor que 0
-      if (currentReport.summary.videosRequested && currentReport.summary.videosRequested > 0) {
-        metricsData.splice(2, 0, ['Vídeos Solicitados', currentReport.summary.videosRequested.toString()])
-      }
-      
-      const nextRow = addEnhancedMetricsTable(summaryWorksheet, metricsData, 9)
-      
-      // Actualizar el rango de la hoja
-      summaryWorksheet['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: nextRow, c: 1 } })
-      
-      // 2. Crear hoja de eventos filtrados con diseño mejorado
-      const excelData = filteredEvents.map((event, index) => {
-        // Formatear fecha para mostrar en formato normalizado
-        let formattedDate = event.timestamp
-        try {
-          const timestampStr = event.timestamp
-          const [datePart, timePart] = timestampStr.split(', ')
-          const [day, month, year] = datePart.split('/')
-          const [hours, minutes, seconds] = timePart.split(':')
-          const fullYear = `20${year}`
-          formattedDate = `${day}/${month}/${fullYear}, ${hours}:${minutes}:${seconds}`
-        } catch (error) {
-          console.error('Error formateando fecha:', event.timestamp, error)
-        }
-        
-        return [
-          index + 1,
-          formattedDate,
-          event.vehiclePlate,
-          event.alarmType,
-          event.driver || 'Sin conductor',
-          getEventCompanyName(event),
-          event.comments || 'Sin comentarios'
-        ]
-      })
-      
-      // Crear hoja de eventos con diseño mejorado
-      const eventsWorksheet = createEnhancedWorksheet(
-        excelData,
-        'Eventos Filtrados',
-        ['#', 'Fecha y Hora', 'Patente', 'Tipo de Alarma', 'Conductor', 'Empresa', 'Comentarios']
-      )
-      
-      // Agregar hojas al workbook en el orden correcto
-      XLSX.utils.book_append_sheet(workbook, summaryWorksheet, 'Resumen')
-      XLSX.utils.book_append_sheet(workbook, eventsWorksheet, 'Eventos Filtrados')
-      
-      // Aplicar estilos mejorados a todo el workbook
-      applyEnhancedStyles(workbook)
-      
-      // Guardar archivo
-      const companySuffix = selectedCompany ? `_${selectedCompany.replace(/\s+/g, '_')}` : ''
-      XLSX.writeFile(workbook, `reporte_conducción_${currentReport.vehicle_plate}${companySuffix}_${format(new Date(), 'yyyyMMdd_HHmm')}.xlsx`)
-      
-      // Mostrar modal de éxito
-      setModalLoading(false)
-      setModalTitle('Exportación Completada')
-      setModalContent(`El reporte de Excel se ha generado exitosamente con diseño mejorado y ${filteredEvents.length} eventos.`)
-      
-      console.log(`Excel exportado exitosamente con ${filteredEvents.length} eventos`)
+      const workbook = XLSX.utils.book_new();
+
+      // --- MAPEO DE NOMBRES DE ALARMAS ---
+      const alarmNameMapping: Record<string, string> = {
+        'cinturon': 'Cinturón de seguridad',
+        'distraido': 'Conductor distraído',
+        'cruce': 'Cruce de carril',
+        'distancia': 'Distancia de seguridad',
+        'fatiga': 'Fatiga',
+        'frenada': 'Frenada brusca',
+        'stop': 'Infracción de señal de stop',
+        'telefono': 'Teléfono móvil',
+        'boton': 'Botón de Alerta',
+        'video': 'Video Solicitado',
+      };
+
+      // --- HOJA DE RESUMEN ---
+      const summarySheetData = [
+        ['Reporte de Alarmas de Conducción'],
+        [], // Fila vacía
+        ['Empresa:', selectedCompany || 'N/A'],
+        ['Vehículo:', currentReport.vehicle_plate],
+        ['Archivo:', currentReport.file_name],
+        ['Fecha de Exportación:', format(new Date(), 'dd/MM/yyyy HH:mm')],
+        [], // Fila vacía
+        ['Resumen de Métricas'],
+        ['Métrica', 'Valor'],
+        ['Total de Alarmas', currentReport.summary.totalAlarms],
+        ['Tipos de Alarma', Object.keys(currentReport.summary.alarmTypes).length],
+        ['Eventos Filtrados', getFilteredEvents().length],
+        [], // Fila vacía
+        ['Resumen por Alarma'],
+        ['Tipo de Alarma', 'Valor'],
+      ];
+
+      const alarmSummaryData = Object.entries(currentReport.summary.alarmTypes).map(([type, count]) => [
+        alarmNameMapping[type.toLowerCase()] || type,
+        count,
+      ]);
+
+      const finalSummaryData = summarySheetData.concat(alarmSummaryData);
+      const summaryWorksheet = XLSX.utils.aoa_to_sheet(finalSummaryData);
+      XLSX.utils.book_append_sheet(workbook, summaryWorksheet, 'Resumen');
+
+      // --- HOJA DE EVENTOS FILTRADOS ---
+      const filteredEvents = getFilteredEvents();
+      const eventsSheetData = filteredEvents.map(event => [
+        formatTimestamp(event.timestamp),
+        event.vehiclePlate,
+        alarmNameMapping[event.alarmType.toLowerCase()] || event.alarmType,
+        event.driver || 'Sin conductor',
+        getEventCompanyName(event),
+        event.comments || 'Sin comentarios',
+      ]);
+
+      const eventsWorksheet = XLSX.utils.aoa_to_sheet([
+        ['Fecha y Hora', 'Patente', 'Tipo de Alarma', 'Conductor', 'Empresa', 'Comentarios'],
+        ...eventsSheetData,
+      ]);
+      XLSX.utils.book_append_sheet(workbook, eventsWorksheet, 'Eventos Filtrados');
+
+      // --- APLICAR ESTILOS ---
+      const styledWorkbook = applyEnhancedStyles(workbook);
+
+      // --- GUARDAR ARCHIVO ---
+      const companySuffix = selectedCompany ? `_${selectedCompany.replace(/\s+/g, '_')}` : '';
+      XLSX.writeFile(styledWorkbook, `reporte_conducción_${currentReport.vehicle_plate}${companySuffix}_${format(new Date(), 'yyyyMMdd_HHmm')}.xlsx`);
+
+      setModalLoading(false);
+      setModalTitle('Exportación Completada');
+      setModalContent(`El reporte de Excel se ha generado exitosamente con ${filteredEvents.length} eventos.`);
     }).catch(error => {
-      console.error('Error al exportar a Excel:', error)
-      // Mostrar modal de error
-      setModalLoading(false)
-      setModalTitle('Error en Exportación')
-      setModalContent('No se pudo generar el reporte de Excel. Por favor, intente nuevamente.')
-    })
-  }
+      console.error('Error al exportar a Excel:', error);
+      setModalLoading(false);
+      setModalTitle('Error en Exportación');
+      setModalContent('No se pudo generar el reporte de Excel. Por favor, intente nuevamente.');
+    });
+  };
 
   const exportToPDF = async () => {
-    if (!currentReport) return
+    if (!currentReport) return;
     
     // Mostrar modal de carga
-    setModalTitle('Exportando a PDF')
-    setModalContent('Generando reporte PDF con gráficos y datos filtrados...')
-    setModalLoading(true)
-    setExportModalOpen(true)
+    setModalTitle('Exportando a PDF');
+    setModalContent('Generando reporte PDF con gráficos y datos filtrados...');
+    setModalLoading(true);
+    setExportModalOpen(true);
     
     try {
-      console.log('Iniciando generación de PDF...')
+      console.log('Iniciando generación de PDF...');
       
       // Importar las librerías dinámicamente
       const [jsPDF] = await Promise.all([
         import('jspdf')
-      ])
+      ]);
       
-      const { default: JsPDF } = jsPDF
+      const { default: JsPDF } = jsPDF;
       
       // Crear un nuevo documento PDF
-      const pdf = new JsPDF('p', 'mm', 'a4')
-      const pageWidth = pdf.internal.pageSize.getWidth()
-      const pageHeight = pdf.internal.pageSize.getHeight()
+      const pdf = new JsPDF('p', 'mm', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
       
       // Configurar colores y estilos
-      const primaryColor = '#1565C0'
+      const primaryColor = '#1565C0';
       
       // Función para agregar el logo como marca de agua
       const addWatermark = async () => {
         try {
           // Cargar el logo gris desde la raíz del proyecto
-          const logoResponse = await fetch('/west_logo_gris.png')
+          const logoResponse = await fetch('/west_logo_gris.png');
           if (logoResponse.ok) {
-            const logoBlob = await logoResponse.blob()
-            const logoBase64 = await blobToBase64(logoBlob)
+            const logoBlob = await logoResponse.blob();
+            const logoBase64 = await blobToBase64(logoBlob);
             
             // Agregar logo como marca de agua en todas las páginas
-            const totalPages = pdf.getNumberOfPages()
+            const totalPages = pdf.getNumberOfPages();
             for (let i = 1; i <= totalPages; i++) {
-              pdf.setPage(i)
+              pdf.setPage(i);
               // Logo con dimensiones proporcionales para mantener proporción original
               // Aumentado tamaño pero manteniendo relación de aspecto (generalmente los logos son más anchos que altos)
-              pdf.addImage(logoBase64, 'PNG', 6, 6, 31, 10)
+              pdf.addImage(logoBase64, 'PNG', 6, 6, 31, 10);
             }
           }
         } catch (error) {
-          console.error('Error al cargar el logo como marca de agua:', error)
+          console.error('Error al cargar el logo como marca de agua:', error);
         }
-      }
+      };
       
       // Función para convertir blob a base64
       const blobToBase64 = (blob: Blob): Promise<string> => {
         return new Promise((resolve, reject) => {
-          const reader = new FileReader()
-          reader.onloadend = () => resolve(reader.result as string)
-          reader.onerror = reject
-          reader.readAsDataURL(blob)
-        })
-      }
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      };
       
       // Función para agregar el encabezado
       const addHeader = () => {
         // Título principal centrado
-        pdf.setFontSize(22)
-        pdf.setTextColor(primaryColor)
-        pdf.text('Reporte de Alarmas de Conducción', pageWidth / 2, 25, { align: 'center' })
+        pdf.setFontSize(22);
+        pdf.setTextColor(primaryColor);
+        pdf.text('Reporte de Alarmas de Conducción', pageWidth / 2, 25, { align: 'center' });
         
         // Salto de línea y alinear a la izquierda la información
-        pdf.setFontSize(12)
-        pdf.setTextColor(100)
-        const infoX = 20
-        let infoY = 40
+        pdf.setFontSize(12);
+        pdf.setTextColor(100);
+        const infoX = 20;
+        let infoY = 40;
         
-        pdf.text(`Empresa: ${selectedCompany || 'N/A'}`, infoX, infoY)
-        infoY += 8
-        pdf.text(`Vehículo: ${currentReport.vehicle_plate}`, infoX, infoY)
-        infoY += 8
-        pdf.text(`Archivo: ${currentReport.file_name}`, infoX, infoY)
-        infoY += 8
-        pdf.text(`Fecha: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, infoX, infoY)
+        pdf.text(`Empresa: ${selectedCompany || 'N/A'}`, infoX, infoY);
+        infoY += 8;
+        pdf.text(`Vehículo: ${currentReport.vehicle_plate}`, infoX, infoY);
+        infoY += 8;
+        pdf.text(`Archivo: ${currentReport.file_name}`, infoX, infoY);
+        infoY += 8;
+        pdf.text(`Fecha: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, infoX, infoY);
         
-        return infoY + 10 // Devolver la posición Y después del encabezado
-      }
+        return infoY + 10; // Devolver la posición Y después del encabezado
+      };
       
       // Función para agregar el pie de página
       const addFooter = (pageNumber: number, totalPages: number) => {
-        const footerY = pageHeight - 15
+        const footerY = pageHeight - 15;
         
         // Línea superior del footer
-        pdf.setDrawColor(primaryColor)
-        pdf.setLineWidth(0.5)
-        pdf.line(15, footerY - 5, pageWidth - 15, footerY - 5)
+        pdf.setDrawColor(primaryColor);
+        pdf.setLineWidth(0.5);
+        pdf.line(15, footerY - 5, pageWidth - 15, footerY - 5);
         
         // Texto del footer
-        pdf.setFontSize(10)
-        pdf.setTextColor(100)
-        pdf.text('West Ingeniería - Reporte de Conducción', 15, footerY)
-        pdf.text(`Página ${pageNumber} de ${totalPages}`, pageWidth - 30, footerY)
+        pdf.setFontSize(10);
+        pdf.setTextColor(100);
+        pdf.text('West Ingeniería - Reporte de Conducción', 15, footerY);
+        pdf.text(`Página ${pageNumber} de ${totalPages}`, pageWidth - 30, footerY);
         
         // Información de contacto
-        pdf.setFontSize(8)
-        pdf.text('Generado por Sistema de Análisis de Alarmas', 15, footerY + 5)
-      }
+        pdf.setFontSize(8);
+        pdf.text('Generado por Sistema de Análisis de Alarmas', 15, footerY + 5);
+      };
       
       // Función para agregar métricas
       const addMetrics = (yPosition: number) => {
-        let currentY = 75
+        let currentY = 75;
         // Título de la sección
-        pdf.setFontSize(18)
-        pdf.setTextColor(primaryColor)
-        pdf.text('Resumen de Métricas', 15, currentY)
+        pdf.setFontSize(18);
+        pdf.setTextColor(primaryColor);
+        pdf.text('Resumen de Métricas', 15, currentY);
 
-        pdf.setDrawColor(primaryColor)
-        pdf.setLineWidth(0.3)
-        pdf.line(15, currentY + 3, pageWidth - 15, currentY + 3)
+        pdf.setDrawColor(primaryColor);
+        pdf.setLineWidth(0.3);
+        pdf.line(15, currentY + 3, pageWidth - 15, currentY + 3);
         
-        const tableStartY = yPosition + 10
-        const rowHeight = 8
-        const tableWidth = pageWidth - 30
-        const tableX = 15
+        const tableStartY = yPosition + 10;
+        const rowHeight = 8;
+        const tableWidth = pageWidth - 30;
+        const tableX = 15;
         
         // Encabezados de tabla
-        pdf.setFillColor(primaryColor)
-        pdf.rect(tableX, tableStartY, tableWidth, rowHeight, 'F')
+        pdf.setFillColor(primaryColor);
+        pdf.rect(tableX, tableStartY, tableWidth, rowHeight, 'F');
         
-        pdf.setFontSize(12)
-        pdf.setTextColor(255, 255, 255)
-        pdf.text('Métrica', tableX + 5, tableStartY + 5.5)
-        pdf.text('Valor', tableX + tableWidth - 25, tableStartY + 5.5)
+        pdf.setFontSize(12);
+        pdf.setTextColor(255, 255, 255);
+        pdf.text('Métrica', tableX + 5, tableStartY + 5.5);
+        pdf.text('Valor', tableX + tableWidth - 25, tableStartY + 5.5);
         
         // Datos de la tabla
         const metricsData = [
@@ -418,418 +411,418 @@ const Dashboard: React.FC = () => {
             [['Vídeos Solicitados', currentReport.summary.videosRequested.toString()]] : []
           ),
           ['Eventos Filtrados', filteredEvents.length.toString()]
-        ]
+        ];
         
-        pdf.setFontSize(11)
-        pdf.setTextColor(0, 0, 0)
+        pdf.setFontSize(11);
+        pdf.setTextColor(0, 0, 0);
         
-        let currentRowY = tableStartY + rowHeight
+        let currentRowY = tableStartY + rowHeight;
         
         metricsData.forEach((row, index) => {
           // Fila alternada
           if (index % 2 === 0) {
-            pdf.setFillColor(245, 245, 245)
-            pdf.rect(tableX, currentRowY, tableWidth, rowHeight, 'F')
+            pdf.setFillColor(245, 245, 245);
+            pdf.rect(tableX, currentRowY, tableWidth, rowHeight, 'F');
           }
           
           // Borde de la fila
-          pdf.setDrawColor(200, 200, 200)
-          pdf.setLineWidth(0.1)
-          pdf.rect(tableX, currentRowY, tableWidth, rowHeight)
+          pdf.setDrawColor(200, 200, 200);
+          pdf.setLineWidth(0.1);
+          pdf.rect(tableX, currentRowY, tableWidth, rowHeight);
           
           // Contenido de la fila
-          pdf.text(row[0], tableX + 5, currentRowY + 5.5)
-          pdf.text(row[1], tableX + tableWidth - 25, currentRowY + 5.5)
+          pdf.text(row[0], tableX + 5, currentRowY + 5.5);
+          pdf.text(row[1], tableX + tableWidth - 25, currentRowY + 5.5);
           
-          currentRowY += rowHeight
-        })
+          currentRowY += rowHeight;
+        });
         
-        return currentRowY + 10
-      }
+        return currentRowY + 10;
+      };
       
       // Función para agregar gráficos con proporciones correctas y espaciado adecuado
       const addCharts = async (startY: number, isFirstPage: boolean) => {
-        let currentY = startY
+        let currentY = startY;
         
         // Ajustar posición inicial según sea la primera página o no
         if (!isFirstPage) {
-          currentY = Math.max(currentY, 35)
+          currentY = Math.max(currentY, 35);
         }
         
         // Título de la sección con subrayado
-        pdf.setFontSize(18)
-        pdf.setTextColor(primaryColor)
-        pdf.text('Análisis Gráfico', 15, currentY)
+        pdf.setFontSize(18);
+        pdf.setTextColor(primaryColor);
+        pdf.text('Análisis Gráfico', 15, currentY);
         
         // Agregar subrayado delgado a lo ancho de la página
-        pdf.setDrawColor(primaryColor)
-        pdf.setLineWidth(0.3)
-        pdf.line(15, currentY + 3, pageWidth - 15, currentY + 3)
+        pdf.setDrawColor(primaryColor);
+        pdf.setLineWidth(0.3);
+        pdf.line(15, currentY + 3, pageWidth - 15, currentY + 3);
         
-        currentY += 15
+        currentY += 15;
         
-        console.log('Capturando gráficos...')
-        console.log('Estado de las referencias:')
-        console.log('- pieChartRef:', pieChartRef.current)
-        console.log('- areaChartRef:', areaChartRef.current)
-        console.log('- lineChartRef:', lineChartRef.current)
+        console.log('Capturando gráficos...');
+        console.log('Estado de las referencias:');
+        console.log('- pieChartRef:', pieChartRef.current);
+        console.log('- areaChartRef:', areaChartRef.current);
+        console.log('- lineChartRef:', lineChartRef.current);
         
         // Capturar gráficos como imágenes con sus dimensiones originales
-        const pieChartResult = await captureChartAsImage(pieChartRef, 'pie-chart')
-        console.log('Gráfico de torta capturado:', pieChartResult.imageData ? 'EXITOSO' : 'FALLÓ')
+        const pieChartResult = await captureChartAsImage(pieChartRef, 'pie-chart');
+        console.log('Gráfico de torta capturado:', pieChartResult.imageData ? 'EXITOSO' : 'FALLÓ');
         
-        const areaChartResult = await captureChartAsImage(areaChartRef, 'area-chart')
-        console.log('Gráfico de área capturado:', areaChartResult.imageData ? 'EXITOSO' : 'FALLÓ')
+        const areaChartResult = await captureChartAsImage(areaChartRef, 'area-chart');
+        console.log('Gráfico de área capturado:', areaChartResult.imageData ? 'EXITOSO' : 'FALLÓ');
         
-        const lineChartResult = await captureChartAsImage(lineChartRef, 'line-chart')
-        console.log('Gráfico de líneas capturado:', lineChartResult.imageData ? 'EXITOSO' : 'FALLÓ')
+        const lineChartResult = await captureChartAsImage(lineChartRef, 'line-chart');
+        console.log('Gráfico de líneas capturado:', lineChartResult.imageData ? 'EXITOSO' : 'FALLÓ');
         
         // Gráfico de torta
         if (pieChartResult.imageData) {
-          console.log('Agregando gráfico de torta al PDF...')
+          console.log('Agregando gráfico de torta al PDF...');
           // Subtítulo destacado con fondo y borde
-          pdf.setFillColor(240, 248, 255)
-          pdf.setDrawColor(primaryColor)
-          pdf.setLineWidth(0.5)
-          pdf.rect(15, currentY, pageWidth - 30, 10, 'FD')
+          pdf.setFillColor(240, 248, 255);
+          pdf.setDrawColor(primaryColor);
+          pdf.setLineWidth(0.5);
+          pdf.rect(15, currentY, pageWidth - 30, 10, 'FD');
           
-          pdf.setFontSize(13)
-          pdf.setTextColor(primaryColor)
-          pdf.setFont('helvetica', 'bold')
-          pdf.text('Distribución de Tipos de Alarmas', 20, currentY + 6)
-          pdf.setFont('helvetica', 'normal')
+          pdf.setFontSize(13);
+          pdf.setTextColor(primaryColor);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text('Distribución de Tipos de Alarmas', 20, currentY + 6);
+          pdf.setFont('helvetica', 'normal');
           
-          currentY += 12
+          currentY += 12;
           
           // Calcular dimensiones manteniendo proporción - AGRANDADO
-          const chartWidth = 180  // Aumentado de 160 a 180 para mejor legibilidad
-          const aspectRatio = pieChartResult.height / pieChartResult.width
-          const chartHeight = chartWidth * aspectRatio
+          const chartWidth = 180;  // Aumentado de 160 a 180 para mejor legibilidad
+          const aspectRatio = pieChartResult.height / pieChartResult.width;
+          const chartHeight = chartWidth * aspectRatio;
           
-          console.log(`Dimensiones gráfico torta: ${chartWidth}x${chartHeight}`)
-          console.log(`Datos de imagen: ${pieChartResult.imageData.substring(0, 50)}...`)
+          console.log(`Dimensiones gráfico torta: ${chartWidth}x${chartHeight}`);
+          console.log(`Datos de imagen: ${pieChartResult.imageData.substring(0, 50)}...`);
           
           // Centrado horizontalmente con margen adecuado
-          const centerX = (pageWidth - chartWidth) / 2
-          pdf.addImage(pieChartResult.imageData, 'PNG', centerX, currentY, chartWidth, chartHeight)
-          currentY += chartHeight + 20  // Aumentado espacio después del gráfico
+          const centerX = (pageWidth - chartWidth) / 2;
+          pdf.addImage(pieChartResult.imageData, 'PNG', centerX, currentY, chartWidth, chartHeight);
+          currentY += chartHeight + 20;  // Aumentado espacio después del gráfico
         }
         
         // Verificar si necesitamos nueva página
         if (currentY + 140 > pageHeight - 30) {
-          pdf.addPage()
-          currentY = 35
+          pdf.addPage();
+          currentY = 35;
         }
         
         // Gráfico de área
         if (areaChartResult.imageData) {
-          console.log('Agregando gráfico de área al PDF...')
+          console.log('Agregando gráfico de área al PDF...');
           // Subtítulo destacado con fondo y borde
-          pdf.setFillColor(240, 248, 255)
-          pdf.setDrawColor(primaryColor)
-          pdf.setLineWidth(0.5)
-          pdf.rect(15, currentY, pageWidth - 30, 10, 'FD')
+          pdf.setFillColor(240, 248, 255);
+          pdf.setDrawColor(primaryColor);
+          pdf.setLineWidth(0.5);
+          pdf.rect(15, currentY, pageWidth - 30, 10, 'FD');
           
-          pdf.setFontSize(13)
-          pdf.setTextColor(primaryColor)
-          pdf.setFont('helvetica', 'bold')
-          pdf.text('Evolución Diaria de Eventos', 20, currentY + 6)
-          pdf.setFont('helvetica', 'normal')
+          pdf.setFontSize(13);
+          pdf.setTextColor(primaryColor);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text('Evolución Diaria de Eventos', 20, currentY + 6);
+          pdf.setFont('helvetica', 'normal');
           
-          currentY += 12
+          currentY += 12;
           
           // Calcular dimensiones manteniendo proporción - AGRANDADO
-          const chartWidth = 180  // Aumentado de 160 a 180 para mejor legibilidad
-          const aspectRatio = areaChartResult.height / areaChartResult.width
-          const chartHeight = chartWidth * aspectRatio
+          const chartWidth = 180;  // Aumentado de 160 a 180 para mejor legibilidad
+          const aspectRatio = areaChartResult.height / areaChartResult.width;
+          const chartHeight = chartWidth * aspectRatio;
           
-          console.log(`Dimensiones gráfico área: ${chartWidth}x${chartHeight}`)
-          console.log(`Datos de imagen: ${areaChartResult.imageData.substring(0, 50)}...`)
+          console.log(`Dimensiones gráfico área: ${chartWidth}x${chartHeight}`);
+          console.log(`Datos de imagen: ${areaChartResult.imageData.substring(0, 50)}...`);
           
           // Centrar horizontalmente el gráfico de área
-          const areaCenterX = (pageWidth - chartWidth) / 2
-          pdf.addImage(areaChartResult.imageData, 'PNG', areaCenterX, currentY, chartWidth, chartHeight)
-          currentY += chartHeight + 15
+          const areaCenterX = (pageWidth - chartWidth) / 2;
+          pdf.addImage(areaChartResult.imageData, 'PNG', areaCenterX, currentY, chartWidth, chartHeight);
+          currentY += chartHeight + 15;
         }
         
         // Verificar si necesitamos nueva página
         if (currentY + 140 > pageHeight - 30) {
-          pdf.addPage()
-          currentY = 35
+          pdf.addPage();
+          currentY = 35;
         }
         
         // Gráfico de líneas
         if (lineChartResult.imageData) {
-          console.log('Agregando gráfico de líneas al PDF...')
+          console.log('Agregando gráfico de líneas al PDF...');
           // Subtítulo destacado con fondo y borde
-          pdf.setFillColor(240, 248, 255)
-          pdf.setDrawColor(primaryColor)
-          pdf.setLineWidth(0.5)
-          pdf.rect(15, currentY, pageWidth - 30, 10, 'FD')
+          pdf.setFillColor(240, 248, 255);
+          pdf.setDrawColor(primaryColor);
+          pdf.setLineWidth(0.5);
+          pdf.rect(15, currentY, pageWidth - 30, 10, 'FD');
           
-          pdf.setFontSize(13)
-          pdf.setTextColor(primaryColor)
-          pdf.setFont('helvetica', 'bold')
-          pdf.text('Alarmas por Hora del Día', 20, currentY + 6)
-          pdf.setFont('helvetica', 'normal')
+          pdf.setFontSize(13);
+          pdf.setTextColor(primaryColor);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text('Alarmas por Hora del Día', 20, currentY + 6);
+          pdf.setFont('helvetica', 'normal');
           
-          currentY += 12
+          currentY += 12;
           
           // Calcular dimensiones manteniendo proporción - AGRANDADO
-          const chartWidth = 180  // Aumentado de 160 a 180 para mejor legibilidad
-          const aspectRatio = lineChartResult.height / lineChartResult.width
-          const chartHeight = chartWidth * aspectRatio
+          const chartWidth = 180;  // Aumentado de 160 a 180 para mejor legibilidad
+          const aspectRatio = lineChartResult.height / lineChartResult.width;
+          const chartHeight = chartWidth * aspectRatio;
           
-          console.log(`Dimensiones gráfico líneas: ${chartWidth}x${chartHeight}`)
-          console.log(`Datos de imagen: ${lineChartResult.imageData.substring(0, 50)}...`)
+          console.log(`Dimensiones gráfico líneas: ${chartWidth}x${chartHeight}`);
+          console.log(`Datos de imagen: ${lineChartResult.imageData.substring(0, 50)}...`);
           
           // Centrar horizontalmente el gráfico de líneas
-          const lineCenterX = (pageWidth - chartWidth) / 2
-          pdf.addImage(lineChartResult.imageData, 'PNG', lineCenterX, currentY, chartWidth, chartHeight)
-          currentY += chartHeight + 15
+          const lineCenterX = (pageWidth - chartWidth) / 2;
+          pdf.addImage(lineChartResult.imageData, 'PNG', lineCenterX, currentY, chartWidth, chartHeight);
+          currentY += chartHeight + 15;
         }
         
-        console.log('Gráficos agregados al PDF. Posición final Y:', currentY)
-        return currentY
-      }
+        console.log('Gráficos agregados al PDF. Posición final Y:', currentY);
+        return currentY;
+      };
       
       // Función para agregar tabla de eventos con TODOS los eventos
       const addEventsTable = async (startY: number) => {
-        if (filteredEvents.length === 0) return startY
+        if (filteredEvents.length === 0) return startY;
         
-        pdf.setFontSize(12)
-        pdf.setTextColor(primaryColor)
-        pdf.text('Eventos Filtrados', 15, startY)
+        pdf.setFontSize(12);
+        pdf.setTextColor(primaryColor);
+        pdf.text('Eventos Filtrados', 15, startY);
         
-        const tableStartY = startY + 10
-        const rowHeight = 6
+        const tableStartY = startY + 10;
+        const rowHeight = 6;
         // CORREGIDO: Ajustar anchos de columnas - Tipo más ancha, Conductor más angosta
-        const colWidths = [25, 35, 50, 20, pageWidth - 130] // Fechas, Patente, Tipo, Conductor, Comentarios
+        const colWidths = [25, 35, 50, 20, pageWidth - 130]; // Fechas, Patente, Tipo, Conductor, Comentarios
         
         // Encabezados de tabla
-        pdf.setFillColor(primaryColor)
-        pdf.rect(15, tableStartY, pageWidth - 30, rowHeight, 'F')
+        pdf.setFillColor(primaryColor);
+        pdf.rect(15, tableStartY, pageWidth - 30, rowHeight, 'F');
         
-        pdf.setFontSize(10)
-        pdf.setTextColor(255, 255, 255)
-        pdf.text('Fecha', 17, tableStartY + 4)
-        pdf.text('Patente', 52, tableStartY + 4) // Ajustado posición
-        pdf.text('Tipo', 97, tableStartY + 4) // Ajustado posición (más a la derecha para más espacio)
-        pdf.text('Conductor', 127, tableStartY + 4) // Ajustado posición (más a la izquierda)
-        pdf.text('Comentarios', 152, tableStartY + 4) // Ajustado posición
+        pdf.setFontSize(10);
+        pdf.setTextColor(255, 255, 255);
+        pdf.text('Fecha', 17, tableStartY + 4);
+        pdf.text('Patente', 52, tableStartY + 4); // Ajustado posición
+        pdf.text('Tipo', 97, tableStartY + 4); // Ajustado posición (más a la derecha para más espacio)
+        pdf.text('Conductor', 127, tableStartY + 4); // Ajustado posición (más a la izquierda)
+        pdf.text('Comentarios', 152, tableStartY + 4); // Ajustado posición
         
         // Contenido de la tabla - MOSTRAR TODOS LOS EVENTOS
-        pdf.setTextColor(0, 0, 0)
-        let currentY = tableStartY + rowHeight
+        pdf.setTextColor(0, 0, 0);
+        let currentY = tableStartY + rowHeight;
         
         // CORREGIDO: Iterar sobre todos los eventos filtrados correctamente
-        console.log(`Procesando ${filteredEvents.length} eventos para la tabla del PDF`)
+        console.log(`Procesando ${filteredEvents.length} eventos para la tabla del PDF`);
         
         for (let i = 0; i < filteredEvents.length; i++) {
-          const event = filteredEvents[i]
+          const event = filteredEvents[i];
           
           // Verificar si necesitamos una nueva página
           if (currentY + rowHeight > pageHeight - 30) {
-            pdf.addPage()
-            currentY = 35
+            pdf.addPage();
+            currentY = 35;
             
             // Repetir encabezados de tabla en nueva página
-            pdf.setFillColor(primaryColor)
-            pdf.rect(15, currentY, pageWidth - 30, rowHeight, 'F')
+            pdf.setFillColor(primaryColor);
+            pdf.rect(15, currentY, pageWidth - 30, rowHeight, 'F');
             
-            pdf.setFontSize(10)
-            pdf.setTextColor(255, 255, 255)
-            pdf.text('Fecha', 17, currentY + 4)
-            pdf.text('Patente', 52, currentY + 4)
-            pdf.text('Tipo', 87, currentY + 4)
-            pdf.text('Conductor', 107, currentY + 4)
-            pdf.text('Comentarios', 142, currentY + 4)
+            pdf.setFontSize(10);
+            pdf.setTextColor(255, 255, 255);
+            pdf.text('Fecha', 17, currentY + 4);
+            pdf.text('Patente', 52, currentY + 4);
+            pdf.text('Tipo', 87, currentY + 4);
+            pdf.text('Conductor', 107, currentY + 4);
+            pdf.text('Comentarios', 142, currentY + 4);
             
-            currentY += rowHeight
-            pdf.setTextColor(0, 0, 0)
+            currentY += rowHeight;
+            pdf.setTextColor(0, 0, 0);
           }
           
           // Fila alternada
           if (i % 2 === 0) {
-            pdf.setFillColor(245, 245, 245)
-            pdf.rect(15, currentY, pageWidth - 30, rowHeight, 'F')
+            pdf.setFillColor(245, 245, 245);
+            pdf.rect(15, currentY, pageWidth - 30, rowHeight, 'F');
           }
           
           // Fecha formateada - CORREGIDO: manejar timestamps inválidos
-          const formattedDate = formatTimestamp(event.timestamp)
+          const formattedDate = formatTimestamp(event.timestamp);
           
-          pdf.setFontSize(8)
-          pdf.setTextColor(0, 0, 0)
-          pdf.text(formattedDate, 17, currentY + 4)
-          pdf.text(event.vehiclePlate, 52, currentY + 4) // Ajustado posición
-          pdf.text(event.alarmType, 97, currentY + 4) // Ajustado posición (más a la derecha para más espacio)
+          pdf.setFontSize(8);
+          pdf.setTextColor(0, 0, 0);
+          pdf.text(formattedDate, 17, currentY + 4);
+          pdf.text(event.vehiclePlate, 52, currentY + 4); // Ajustado posición
+          pdf.text(event.alarmType, 97, currentY + 4); // Ajustado posición (más a la derecha para más espacio)
           
           // Conductor - limitar contenido para que no pase a la siguiente columna
-          const driver = event.driver || 'Sin conductor'
-          const truncatedDriver = driver.length > 15 ? driver.substring(0, 15) + '...' : driver
-          pdf.text(truncatedDriver, 127, currentY + 4) // Ajustado posición (más a la izquierda)
+          const driver = event.driver || 'Sin conductor';
+          const truncatedDriver = driver.length > 15 ? driver.substring(0, 15) + '...' : driver;
+          pdf.text(truncatedDriver, 127, currentY + 4); // Ajustado posición (más a la izquierda)
           
           // Comentarios truncados intencionalmente
-          const comments = event.comments || 'Sin comentarios'
-          const truncatedComments = comments.length > 25 ? comments.substring(0, 25) + '...' : comments
-          pdf.text(truncatedComments, 152, currentY + 4) // Ajustado posición
+          const comments = event.comments || 'Sin comentarios';
+          const truncatedComments = comments.length > 25 ? comments.substring(0, 25) + '...' : comments;
+          pdf.text(truncatedComments, 152, currentY + 4); // Ajustado posición
           
           // Incrementar currentY para la siguiente fila
-          currentY += rowHeight
+          currentY += rowHeight;
         }
         
-        console.log(`Tabla completada. Última posición Y: ${currentY}`)
+        console.log(`Tabla completada. Última posición Y: ${currentY}`);
         
-        return currentY
-      }
+        return currentY;
+      };
       
       // Generar el PDF
-      console.log('Generando PDF...')
-      const headerEndY = addHeader()
+      console.log('Generando PDF...');
+      const headerEndY = addHeader();
       
-      let currentY = headerEndY
+      let currentY = headerEndY;
       
       // Agregar página 1 - Métricas
-      currentY = addMetrics(currentY)
+      currentY = addMetrics(currentY);
       
       // Verificar si necesitamos nueva página para gráficos
       if (currentY + 50 > pageHeight - 30) {
-        pdf.addPage()
-        currentY = 35
+        pdf.addPage();
+        currentY = 35;
       }
       
       // Agregar gráficos (primera página)
-      currentY = await addCharts(currentY, true)
+      currentY = await addCharts(currentY, true);
       
       // Verificar si necesitamos más páginas para la tabla
       if (currentY + 50 > pageHeight - 30) {
-        pdf.addPage()
-        currentY = 35
+        pdf.addPage();
+        currentY = 35;
       }
       
       // Agregar tabla de eventos con TODOS los eventos
-      currentY = await addEventsTable(currentY)
+      currentY = await addEventsTable(currentY);
       
       // Agregar marca de agua a todas las páginas
-      await addWatermark()
+      await addWatermark();
       
       // Agregar footer a todas las páginas
-      const totalPages = pdf.getNumberOfPages()
+      const totalPages = pdf.getNumberOfPages();
       for (let i = 1; i <= totalPages; i++) {
-        pdf.setPage(i)
-        addFooter(i, totalPages)
+        pdf.setPage(i);
+        addFooter(i, totalPages);
       }
       
       // Guardar el PDF
-      const companySuffix = selectedCompany ? `_${selectedCompany.replace(/\s+/g, '_')}` : ''
-      const fileName = `reporte_conducción_${currentReport.vehicle_plate}${companySuffix}_${format(new Date(), 'yyyyMMdd_HHmm')}.pdf`
-      pdf.save(fileName)
+      const companySuffix = selectedCompany ? `_${selectedCompany.replace(/\s+/g, '_')}` : '';
+      const fileName = `reporte_conducción_${currentReport.vehicle_plate}${companySuffix}_${format(new Date(), 'yyyyMMdd_HHmm')}.pdf`;
+      pdf.save(fileName);
       
-      console.log(`PDF generado exitosamente con todos los ${filteredEvents.length} eventos filtrados`)
+      console.log(`PDF generado exitosamente con todos los ${filteredEvents.length} eventos filtrados`);
       
       // Mostrar modal de éxito
-      setModalLoading(false)
-      setModalTitle('Exportación Completada')
-      setModalContent(`El reporte PDF se ha generado exitosamente con ${filteredEvents.length} eventos.`)
+      setModalLoading(false);
+      setModalTitle('Exportación Completada');
+      setModalContent(`El reporte PDF se ha generado exitosamente con ${filteredEvents.length} eventos.`);
     } catch (error) {
-      console.error('Error al generar PDF:', error)
+      console.error('Error al generar PDF:', error);
       // Mostrar modal de error
-      setModalLoading(false)
-      setModalTitle('Error en Exportación')
-      setModalContent('No se pudo generar el reporte PDF. Por favor, intente nuevamente.')
+      setModalLoading(false);
+      setModalTitle('Error en Exportación');
+      setModalContent('No se pudo generar el reporte PDF. Por favor, intente nuevamente.');
     }
-  }
+  };
 
   const getAlarmsByHour = () => {
-    const events = getFilteredEvents()
-    if (events.length === 0) return []
+    const events = getFilteredEvents();
+    if (events.length === 0) return [];
     
-    const hourCounts: Record<number, number> = {}
+    const hourCounts: Record<number, number> = {};
     
     // Inicializar todas las horas (0-23) en 0
     for (let i = 0; i < 24; i++) {
-      hourCounts[i] = 0
+      hourCounts[i] = 0;
     }
     
     // Contar alarmas por hora usando eventos filtrados
     events.forEach(event => {
       try {
         // Parsear el timestamp en formato "14/09/25, 11:38:35" - mismo método que getFilteredEvents
-        const timestampStr = event.timestamp
-        const [datePart, timePart] = timestampStr.split(', ')
-        const [day, month, year] = datePart.split('/')
-        const [hours, minutes, seconds] = timePart.split(':')
+        const timestampStr = event.timestamp;
+        const [datePart, timePart] = timestampStr.split(', ');
+        const [day, month, year] = datePart.split('/');
+        const [hours, minutes, seconds] = timePart.split(':');
         
         // Crear fecha con formato correcto (añadir 2000 al año de 2 dígitos)
-        const fullYear = `20${year}`
-        const eventDate = new Date(`${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hours}:${minutes}:${seconds}`)
+        const fullYear = `20${year}`;
+        const eventDate = new Date(`${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hours}:${minutes}:${seconds}`);
         
-        const hour = eventDate.getHours()
-        hourCounts[hour] = (hourCounts[hour] || 0) + 1
+        const hour = eventDate.getHours();
+        hourCounts[hour] = (hourCounts[hour] || 0) + 1;
       } catch (error) {
-        console.error('Error parsing timestamp:', event.timestamp, error)
+        console.error('Error parsing timestamp:', event.timestamp, error);
       }
-    })
+    });
     
     // Convertir a formato para el gráfico (horarios fijos)
     return Array.from({ length: 24 }, (_, i) => {
       return {
         hour: `${i.toString().padStart(2, '0')}:00`,
         alarmas: hourCounts[i] || 0
-      }
-    })
-  }
+      };
+    });
+  };
 
   const getFilteredAlarmTypes = () => {
-    const events = getFilteredEvents()
-    const alarmTypes: Record<string, number> = {}
+    const events = getFilteredEvents();
+    const alarmTypes: Record<string, number> = {};
     
     events.forEach(event => {
-      alarmTypes[event.alarmType] = (alarmTypes[event.alarmType] || 0) + 1
-    })
+      alarmTypes[event.alarmType] = (alarmTypes[event.alarmType] || 0) + 1;
+    });
     
-    return alarmTypes
-  }
+    return alarmTypes;
+  };
 
   const getFilteredDailyEvolution = () => {
-    const events = getFilteredEvents()
-    if (events.length === 0) return { labels: [], data: [] }
+    const events = getFilteredEvents();
+    if (events.length === 0) return { labels: [], data: [] };
     
-    const dailyCounts: Record<string, number> = {}
+    const dailyCounts: Record<string, number> = {};
     
     events.forEach(event => {
       try {
         // Parsear el timestamp en formato "14/09/25, 11:38:35"
-        const timestampStr = event.timestamp
-        const [datePart, timePart] = timestampStr.split(', ')
-        const [day, month, year] = datePart.split('/')
-        const [hours, minutes, seconds] = timePart.split(':')
+        const timestampStr = event.timestamp;
+        const [datePart, timePart] = timestampStr.split(', ');
+        const [day, month, year] = datePart.split('/');
+        const [hours, minutes, seconds] = timePart.split(':');
         
         // Crear fecha con formato correcto (añadir 2000 al año de 2 dígitos)
-        const fullYear = `20${year}`
-        const dateKey = `${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+        const fullYear = `20${year}`;
+        const dateKey = `${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
         
-        dailyCounts[dateKey] = (dailyCounts[dateKey] || 0) + 1
+        dailyCounts[dateKey] = (dailyCounts[dateKey] || 0) + 1;
       } catch (error) {
-        console.error('Error parsing timestamp:', event.timestamp, error)
+        console.error('Error parsing timestamp:', event.timestamp, error);
       }
-    })
+    });
     
     // Ordenar fechas y convertir a formato para el gráfico
-    const sortedDates = Object.keys(dailyCounts).sort()
+    const sortedDates = Object.keys(dailyCounts).sort();
     return {
       labels: sortedDates,
       data: sortedDates.map(date => dailyCounts[date])
-    }
-  }
+    };
+  };
 
-  const filteredEvents = getFilteredEvents()
+  const filteredEvents = getFilteredEvents();
   const mostFrequentType = filteredEvents.reduce((acc, event) => {
-    acc[event.alarmType] = (acc[event.alarmType] || 0) + 1
-    return acc
-  }, {} as Record<string, number>)
+    acc[event.alarmType] = (acc[event.alarmType] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
 
-  const mostFrequent = Object.entries(mostFrequentType).sort(([,a], [,b]) => b - a)[0]
+  const mostFrequent = Object.entries(mostFrequentType).sort(([,a], [,b]) => b - a)[0];
 
   return (
     <Box sx={{ 
@@ -847,20 +840,20 @@ const Dashboard: React.FC = () => {
       <UploadSection 
         onUpload={() => {}} 
         onUploadStart={() => {
-          setModalTitle('Cargando Archivo')
-          setModalContent('Procesando archivo Excel. Por favor espere...')
-          setModalLoading(true)
-          setUploadModalOpen(true)
+          setModalTitle('Cargando Archivo');
+          setModalContent('Procesando archivo Excel. Por favor espere...');
+          setModalLoading(true);
+          setUploadModalOpen(true);
         }}
         onUploadComplete={() => {
-          setModalLoading(false)
-          setModalTitle('Carga Completada')
-          setModalContent('El archivo se ha procesado exitosamente.')
+          setModalLoading(false);
+          setModalTitle('Carga Completada');
+          setModalContent('El archivo se ha procesado exitosamente.');
         }}
         onUploadError={(error) => {
-          setModalLoading(false)
-          setModalTitle('Error en la Carga')
-          setModalContent(error || 'No se pudo procesar el archivo. Por favor intente nuevamente.')
+          setModalLoading(false);
+          setModalTitle('Error en la Carga');
+          setModalContent(error || 'No se pudo procesar el archivo. Por favor intente nuevamente.');
         }}
       />
 
@@ -964,16 +957,16 @@ const Dashboard: React.FC = () => {
             onSaveToDB={() => console.log('Guardar en BD')}
             onRestart={() => {
               // Limpiar el reporte actual y filtros
-              dispatch(clearCurrentReport())
+              dispatch(clearCurrentReport());
               setFilters({
                 tipo: [],
                 patente: '',
                 fechaInicio: '',
                 fechaFin: '',
                 comentario: '',
-              })
-              setSelectedCompany('')
-              setAvailableCompanies([])
+              });
+              setSelectedCompany('');
+              setAvailableCompanies([]);
             }}
             selectedCompany={selectedCompany}
             availableCompanies={availableCompanies}
@@ -1058,7 +1051,7 @@ const Dashboard: React.FC = () => {
         </Typography>
       </Box>
     </Box>
-  )
-}
+  );
+};
 
-export default Dashboard
+export default Dashboard;

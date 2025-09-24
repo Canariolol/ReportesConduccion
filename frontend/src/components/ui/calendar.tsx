@@ -1,238 +1,123 @@
-"use client"
+import * as React from 'react';
+import { DayPicker, DayPickerProps } from 'react-day-picker';
+import { styled } from '@mui/material/styles';
+import { es } from 'date-fns/locale';
 
-import * as React from "react"
-import { getLocalTimeZone, today } from "@internationalized/date"
-import { ChevronLeft, ChevronRight } from "lucide-react"
-import {
-  Button as AriaButton,
-  Calendar as AriaCalendar,
-  CalendarCell as AriaCalendarCell,
-  CalendarCellProps as AriaCalendarCellProps,
-  CalendarGrid as AriaCalendarGrid,
-  CalendarGridBody as AriaCalendarGridBody,
-  CalendarGridBodyProps as AriaCalendarGridBodyProps,
-  CalendarGridHeader as AriaCalendarGridHeader,
-  CalendarGridHeaderProps as AriaCalendarGridHeaderProps,
-  CalendarGridProps as AriaCalendarGridProps,
-  CalendarHeaderCell as AriaCalendarHeaderCell,
-  CalendarHeaderCellProps as AriaCalendarHeaderCellProps,
-  CalendarProps as AriaCalendarProps,
-  DateValue as AriaDateValue,
-  Heading as AriaHeading,
-  RangeCalendar as AriaRangeCalendar,
-  RangeCalendarProps as AriaRangeCalendarProps,
-  RangeCalendarStateContext as AriaRangeCalendarStateContext,
-  composeRenderProps,
-  Text,
-  useLocale,
-} from "react-aria-components"
+const StyledDayPicker = styled(DayPicker)(({ theme }) => ({
+  '& .rdp-months': {
+    display: 'flex',
+    flexDirection: 'column',
+    [theme.breakpoints.up('sm')]: {
+      flexDirection: 'row',
+    },
+  },
+  '& .rdp-month': {
+    margin: theme.spacing(2),
+  },
+  '& .rdp-caption': {
+    display: 'flex',
+    justifyContent: 'center',
+    paddingTop: theme.spacing(1),
+    position: 'relative',
+    alignItems: 'center',
+  },
+  '& .rdp-caption_label': {
+    fontSize: '0.875rem',
+    fontWeight: 500,
+  },
+  '& .rdp-nav': {
+    display: 'flex',
+    alignItems: 'center',
+  },
+  '& .rdp-nav_button': {
+    height: '2rem',
+    width: '2rem',
+    padding: 0,
+    backgroundColor: 'transparent',
+    border: '1px solid',
+    borderColor: theme.palette.divider,
+    borderRadius: theme.shape.borderRadius,
+    '&:hover': {
+      backgroundColor: theme.palette.action.hover,
+    },
+  },
+  '& .rdp-nav_button_previous': {
+    position: 'absolute',
+    left: theme.spacing(1),
+  },
+  '& .rdp-nav_button_next': {
+    position: 'absolute',
+    right: theme.spacing(1),
+  },
+  '& .rdp-table': {
+    width: '100%',
+    borderCollapse: 'collapse',
+  },
+  '& .rdp-head_row': {
+    display: 'flex',
+  },
+  '& .rdp-head_cell': {
+    color: theme.palette.text.secondary,
+    borderRadius: theme.shape.borderRadius,
+    width: '2.25rem',
+    fontWeight: 400,
+    fontSize: '0.8rem',
+  },
+  '& .rdp-row': {
+    display: 'flex',
+    width: '100%',
+    marginTop: theme.spacing(1),
+  },
+  '& .rdp-cell': {
+    height: '2.25rem',
+    width: '2.25rem',
+    textAlign: 'center',
+    fontSize: '0.875rem',
+    padding: 0,
+    position: 'relative',
+    '&[aria-selected]': {
+      backgroundColor: theme.palette.action.selected,
+    },
+  },
+  '& .rdp-day': {
+    height: '2.25rem',
+    width: '2.25rem',
+    padding: 0,
+    fontWeight: 400,
+    '&[aria-selected]': {
+      opacity: 1,
+    },
+  },
+  '& .rdp-day_selected': {
+    backgroundColor: theme.palette.primary.main,
+    color: theme.palette.primary.contrastText,
+    '&:hover': {
+      backgroundColor: theme.palette.primary.dark,
+    },
+  },
+  '& .rdp-day_today': {
+    backgroundColor: theme.palette.action.selected,
+  },
+  '& .rdp-day_outside': {
+    color: theme.palette.text.disabled,
+  },
+  '& .rdp-day_disabled': {
+    color: theme.palette.text.disabled,
+  },
+  '& .rdp-day_range_middle': {
+    backgroundColor: theme.palette.action.hover,
+  },
+}));
 
-import { cn } from "../../lib/utils"
-import { buttonVariants } from "./button"
-
-const Calendar = AriaCalendar
-
-const RangeCalendar = AriaRangeCalendar
-
-const CalendarHeading = (props: React.HTMLAttributes<HTMLElement>) => {
-  let { direction } = useLocale()
-
+function Calendar(props: DayPickerProps) {
   return (
-    <header className="flex w-full items-center gap-1 px-1 pb-4" {...props}>
-      <AriaButton
-        slot="previous"
-        className={cn(
-          buttonVariants({ variant: "outline" }),
-          "size-7 bg-transparent p-0 opacity-50",
-          /* Hover */
-          "data-[hovered]:opacity-100"
-        )}
-      >
-        {direction === "rtl" ? (
-          <ChevronRight aria-hidden className="size-4" />
-        ) : (
-          <ChevronLeft aria-hidden className="size-4" />
-        )}
-      </AriaButton>
-      <AriaHeading className="grow text-center text-sm font-medium" />
-      <AriaButton
-        slot="next"
-        className={cn(
-          buttonVariants({ variant: "outline" }),
-          "size-7 bg-transparent p-0 opacity-50",
-          /* Hover */
-          "data-[hovered]:opacity-100"
-        )}
-      >
-        {direction === "rtl" ? (
-          <ChevronLeft aria-hidden className="size-4" />
-        ) : (
-          <ChevronRight aria-hidden className="size-4" />
-        )}
-      </AriaButton>
-    </header>
-  )
-}
-
-const CalendarGrid = ({ className, ...props }: AriaCalendarGridProps) => (
-  <AriaCalendarGrid
-    className={cn(
-      " border-separate border-spacing-x-0 border-spacing-y-1 ",
-      className
-    )}
-    {...props}
-  />
-)
-
-const CalendarGridHeader = ({ ...props }: AriaCalendarGridHeaderProps) => (
-  <AriaCalendarGridHeader {...props} />
-)
-
-const CalendarHeaderCell = ({
-  className,
-  ...props
-}: AriaCalendarHeaderCellProps) => (
-  <AriaCalendarHeaderCell
-    className={cn(
-      "w-9 rounded-md text-[0.8rem] font-normal text-muted-foreground",
-      className
-    )}
-    {...props}
-  />
-)
-
-const CalendarGridBody = ({
-  className,
-  ...props
-}: AriaCalendarGridBodyProps) => (
-  <AriaCalendarGridBody className={cn("[&>tr>td]:p-0", className)} {...props} />
-)
-
-const CalendarCell = ({ className, ...props }: AriaCalendarCellProps) => {
-  const isRange = Boolean(React.useContext(AriaRangeCalendarStateContext))
-  return (
-    <AriaCalendarCell
-      className={composeRenderProps(className, (className, renderProps) =>
-        cn(
-          buttonVariants({ variant: "ghost" }),
-          "relative flex size-9 items-center justify-center p-0 text-sm font-normal",
-          /* Disabled */
-          renderProps.isDisabled && "text-muted-foreground opacity-50",
-          /* Selected */
-          renderProps.isSelected &&
-            "bg-primary text-primary-foreground data-[focused]:bg-primary  data-[focused]:text-primary-foreground",
-          /* Hover */
-          renderProps.isHovered &&
-            renderProps.isSelected &&
-            (renderProps.isSelectionStart ||
-              renderProps.isSelectionEnd ||
-              !isRange) &&
-            "data-[hovered]:bg-primary data-[hovered]:text-primary-foreground",
-          /* Selection Start/End */
-          renderProps.isSelected &&
-            isRange &&
-            !renderProps.isSelectionStart &&
-            !renderProps.isSelectionEnd &&
-            "rounded-none bg-accent text-accent-foreground",
-          /* Outside Month */
-          renderProps.isOutsideMonth &&
-            "text-muted-foreground opacity-50 data-[selected]:bg-accent/50 data-[selected]:text-muted-foreground data-[selected]:opacity-30",
-          /* Current Date */
-          renderProps.date.compare(today(getLocalTimeZone())) === 0 &&
-            !renderProps.isSelected &&
-            "bg-accent text-accent-foreground",
-          /* Unavailable Date */
-          renderProps.isUnavailable && "cursor-default text-destructive ",
-          renderProps.isInvalid &&
-            "bg-destructive text-destructive-foreground data-[focused]:bg-destructive data-[hovered]:bg-destructive data-[focused]:text-destructive-foreground data-[hovered]:text-destructive-foreground",
-          className
-        )
-      )}
+    <StyledDayPicker
+      showOutsideDays
+      locale={es}
       {...props}
     />
-  )
+  );
 }
+Calendar.displayName = "Calendar";
 
-interface JollyCalendarProps<T extends AriaDateValue>
-  extends AriaCalendarProps<T> {
-  errorMessage?: string
-}
-
-function JollyCalendar<T extends AriaDateValue>({
-  errorMessage,
-  className,
-  ...props
-}: JollyCalendarProps<T>) {
-  return (
-    <Calendar
-      className={composeRenderProps(className, (className) =>
-        cn("w-fit", className)
-      )}
-      {...props}
-    >
-      <CalendarHeading />
-      <CalendarGrid>
-        <CalendarGridHeader>
-          {(day) => <CalendarHeaderCell>{day}</CalendarHeaderCell>}
-        </CalendarGridHeader>
-        <CalendarGridBody>
-          {(date) => <CalendarCell date={date} />}
-        </CalendarGridBody>
-      </CalendarGrid>
-      {errorMessage && (
-        <Text className="text-sm text-destructive" slot="errorMessage">
-          {errorMessage}
-        </Text>
-      )}
-    </Calendar>
-  )
-}
-
-interface JollyRangeCalendarProps<T extends AriaDateValue>
-  extends AriaRangeCalendarProps<T> {
-  errorMessage?: string
-}
-
-function JollyRangeCalendar<T extends AriaDateValue>({
-  errorMessage,
-  className,
-  ...props
-}: JollyRangeCalendarProps<T>) {
-  return (
-    <RangeCalendar
-      className={composeRenderProps(className, (className) =>
-        cn("w-fit", className)
-      )}
-      {...props}
-    >
-      <CalendarHeading />
-      <CalendarGrid>
-        <CalendarGridHeader>
-          {(day) => <CalendarHeaderCell>{day}</CalendarHeaderCell>}
-        </CalendarGridHeader>
-        <CalendarGridBody>
-          {(date) => <CalendarCell date={date} />}
-        </CalendarGridBody>
-      </CalendarGrid>
-      {errorMessage && (
-        <Text slot="errorMessage" className="text-sm text-destructive">
-          {errorMessage}
-        </Text>
-      )}
-    </RangeCalendar>
-  )
-}
-
-export {
-  Calendar,
-  CalendarCell,
-  CalendarGrid,
-  CalendarGridBody,
-  CalendarGridHeader,
-  CalendarHeaderCell,
-  CalendarHeading,
-  RangeCalendar,
-  JollyCalendar,
-  JollyRangeCalendar,
-}
-export type { JollyCalendarProps, JollyRangeCalendarProps }
+export { Calendar };
