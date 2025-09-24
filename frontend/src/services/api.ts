@@ -11,12 +11,14 @@ const getApiConfig = () => {
   }
   
   // En producción, usar la URL del backend desplegado
-  const productionApiUrl = import.meta.env.VITE_API_URL || 'https://reportes-conduccion-backend-uc2a3x5aca-uc.a.run.app'
+  const productionApiUrl = import.meta.env.VITE_API_URL || 'https://reportes-conduccion-backend-51038157662.us-central1.run.app/api'
   
-  return {
+  const config = {
     baseURL: productionApiUrl,
     timeout: 30000,
   }
+  console.log('API Config:', config) // Log para depuración
+  return config
 }
 
 // Crear instancia de axios con configuración

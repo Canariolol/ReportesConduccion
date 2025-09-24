@@ -3,6 +3,7 @@ from firebase_admin import credentials, firestore, storage
 import os
 import json
 import logging
+import re
 from .config import settings
 
 # Configurar logging
@@ -14,54 +15,51 @@ class FirebaseManager:
         if not firebase_admin._apps:
             logger.info("🚀 Inicializando Firebase Manager...")
             
-            # Verificar si estamos en Cloud Run
             is_cloud_run = os.getenv('K_SERVICE') is not None
             logger.info(f"📍 Entorno: {'Cloud Run' if is_cloud_run else 'Local'}")
             
             if is_cloud_run:
                 logger.info("🔐 Intentando leer secret de Cloud Run...")
+                firebase_secret_path = '/secrets/firebase/key'
+                cors_secret_path = '/secrets/cors/origins'
                 
-                # Intentar leer el secret
-                secret_path = '/etc/secrets/firebase-private-key'
                 try:
-                    with open(secret_path, 'r') as f:
+                    with open(firebase_secret_path, 'r') as f:
                         secret_content = f.read()
-                    logger.info(f"✅ Secret leído exitosamente desde {secret_path}")
-                    logger.info(f"📋 Longitud del secret: {len(secret_content)} caracteres")
+                    logger.info(f"✅ Secret de Firebase leído exitosamente desde {firebase_secret_path}")
+
+                    # Procesar saltos de línea en la clave privada del secret
+                    private_key = re.sub(r'\\n', '\n', secret_content)
+                    logger.info("🔄 Procesados saltos de línea en la clave privada del secret")
+
+                    with open(cors_secret_path, 'r') as f:
+                        cors_content = f.read()
+                    logger.info(f"✅ Configuración de CORS leída exitosamente desde {cors_secret_path}")
                     
-                    # Verificar si es JSON o solo la clave privada
-                    try:
-                        secret_data = json.loads(secret_content)
-                        logger.info("📄 El secret es un JSON completo")
-                        cred = credentials.Certificate(secret_data)
-                    except json.JSONDecodeError:
-                        logger.info("🔑 El secret es solo la clave privada")
-                        # Construir el objeto de credencial manualmente
-                        cred = credentials.Certificate({
-                            "type": "service_account",
-                            "project_id": settings.FIREBASE_PROJECT_ID,
-                            "private_key_id": settings.FIREBASE_PRIVATE_KEY_ID,
-                            "private_key": secret_content,
-                            "client_email": settings.FIREBASE_CLIENT_EMAIL,
-                            "client_id": settings.FIREBASE_CLIENT_ID,
-                            "auth_uri": settings.FIREBASE_AUTH_URI,
-                            "token_uri": settings.FIREBASE_TOKEN_URI,
-                            "auth_provider_x509_cert_url": settings.FIREBASE_AUTH_PROVIDER_X509_CERT_URL,
-                            "client_x509_cert_url": settings.FIREBASE_CLIENT_X509_CERT_URL
-                        })
+                    cors_origins = json.loads(cors_content)
+                    settings.BACKEND_CORS_ORIGINS = cors_origins
+                    logger.info(f"📋 CORS configurado con: {cors_origins}")
                     
-                except FileNotFoundError:
-                    logger.error(f"❌ No se encontró el secret en {secret_path}")
-                    logger.info("🔄 Usando variables de entorno como fallback...")
-                    self._use_environment_variables()
-                    return
+                    cred = credentials.Certificate({
+                        "type": "service_account",
+                        "project_id": settings.FIREBASE_PROJECT_ID,
+                        "private_key_id": settings.FIREBASE_PRIVATE_KEY_ID,
+                        "private_key": private_key,
+                        "client_email": settings.FIREBASE_CLIENT_EMAIL,
+                        "client_id": settings.FIREBASE_CLIENT_ID,
+                        "auth_uri": settings.FIREBASE_AUTH_URI,
+                        "token_uri": settings.FIREBASE_TOKEN_URI,
+                        "auth_provider_x509_cert_url": settings.FIREBASE_AUTH_PROVIDER_X509_CERT_URL,
+                        "client_x509_cert_url": settings.FIREBASE_CLIENT_X509_CERT_URL
+                    })
+                    
                 except Exception as e:
-                    logger.error(f"❌ Error al leer el secret: {str(e)}")
+                    logger.error(f"❌ Error al leer los secretos: {str(e)}")
                     logger.info("🔄 Usando variables de entorno como fallback...")
                     self._use_environment_variables()
                     return
             else:
-                logger.info("💻 Usando variables de entorno para desarrollo local...")
+                logger.info(" Usando variables de entorno para desarrollo local...")
                 self._use_environment_variables()
                 return
             
@@ -83,20 +81,17 @@ class FirebaseManager:
         """Usar variables de entorno como fallback"""
         logger.info("📝 Configurando credenciales desde variables de entorno...")
         
-        private_key = settings.FIREBASE_PRIVATE_KEY
-        logger.info(f"📋 Longitud de la clave privada: {len(private_key)} caracteres")
+        private_key_env = settings.FIREBASE_PRIVATE_KEY
+        logger.info(f"📋 Longitud de la clave privada: {len(private_key_env)} caracteres")
         
-        # Procesar la clave privada
-        if private_key.startswith('"') and private_key.endswith('"'):
-            private_key = private_key[1:-1]
+        if private_key_env.startswith('"') and private_key_env.endswith('"'):
+            private_key_env = private_key_env[1:-1]
             logger.info("🔄 Quitadas comillas de la clave privada")
         
-        # Reemplazar \n con saltos de línea reales
-        import re
-        private_key = re.sub(r'\\n', '\n', private_key)
+        private_key = re.sub(r'\\n', '\n', private_key_env)
         logger.info("🔄 Procesados saltos de línea en la clave privada")
         
-        cred = credentials.Certificate({
+        cred_dict = {
             "type": "service_account",
             "project_id": settings.FIREBASE_PROJECT_ID,
             "private_key_id": settings.FIREBASE_PRIVATE_KEY_ID,
@@ -107,7 +102,11 @@ class FirebaseManager:
             "token_uri": settings.FIREBASE_TOKEN_URI,
             "auth_provider_x509_cert_url": settings.FIREBASE_AUTH_PROVIDER_X509_CERT_URL,
             "client_x509_cert_url": settings.FIREBASE_CLIENT_X509_CERT_URL
-        })
+        }
+
+        cred_dict = {k: v for k, v in cred_dict.items() if v}
+        
+        cred = credentials.Certificate(cred_dict)
         
         try:
             firebase_admin.initialize_app(cred, {
@@ -119,11 +118,9 @@ class FirebaseManager:
             raise
     
     def get_db(self):
-        """Get Firestore database instance"""
         return self.db
     
     def get_storage(self):
-        """Get Firebase Storage bucket instance"""
         return self.storage
 
 # Global Firebase instance
