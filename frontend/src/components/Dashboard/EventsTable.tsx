@@ -12,10 +12,11 @@ interface Event {
 
 interface EventsTableProps {
   events: Event[]
+  totalEvents: number
   getAlarmColor: (type: string) => string
 }
 
-const EventsTable: React.FC<EventsTableProps> = ({ events, getAlarmColor }) => {
+const EventsTable: React.FC<EventsTableProps> = ({ events, totalEvents, getAlarmColor }) => {
   return (
     <Card>
       <CardContent>
@@ -74,6 +75,11 @@ const EventsTable: React.FC<EventsTableProps> = ({ events, getAlarmColor }) => {
             </TableBody>
           </Table>
         </TableContainer>
+        <Box sx={{ mt: 2, textAlign: 'center' }}>
+          <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+            Mostrando {events.length} de {totalEvents} eventos
+          </Typography>
+        </Box>
       </CardContent>
     </Card>
   )

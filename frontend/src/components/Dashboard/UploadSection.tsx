@@ -8,21 +8,43 @@ import { AppDispatch } from '../../store/store.ts'
 
 interface UploadSectionProps {
   onUpload: (file: File) => void
+  onUploadStart: () => void
+  onUploadComplete: () => void
+  onUploadError: (error: string) => void
 }
 
-const UploadSection: React.FC<UploadSectionProps> = ({ onUpload }) => {
+const UploadSection: React.FC<UploadSectionProps> = ({ 
+  onUpload, 
+  onUploadStart, 
+  onUploadComplete, 
+  onUploadError 
+}) => {
   const dispatch = useDispatch<AppDispatch>()
 
   const onDrop = React.useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0]
     if (file) {
+      // Notificar inicio de carga
+      onUploadStart()
+      
       const formData = new FormData()
       formData.append('file', file)
       formData.append('user_id', 'demo_user')
+      
+      // Dispatch la acción de upload
       dispatch(uploadExcel(formData))
-      onUpload(file)
+        .unwrap()
+        .then(() => {
+          // Notificar carga completada
+          onUploadComplete()
+          onUpload(file)
+        })
+        .catch((error) => {
+          // Notificar error en carga
+          onUploadError(error.message || 'Error al procesar el archivo')
+        })
     }
-  }, [dispatch, onUpload])
+  }, [dispatch, onUpload, onUploadStart, onUploadComplete, onUploadError])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,

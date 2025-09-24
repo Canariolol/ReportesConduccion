@@ -119,8 +119,8 @@ const Dashboard: React.FC = () => {
         return false // Excluir eventos con fechas inválidas
       }
       
-      // Comparar fechas
-      const fechaInicioValida = !filters.fechaInicio || eventDate >= new Date(filters.fechaInicio)
+      // Comparar fechas - CORREGIDO: Ajustar para problemas de zona horaria
+      const fechaInicioValida = !filters.fechaInicio || eventDate >= new Date(filters.fechaInicio + 'T00:00:00')
       const fechaFinValida = !filters.fechaFin || eventDate <= new Date(filters.fechaFin + 'T23:59:59')
       
       return (
@@ -960,7 +960,25 @@ const Dashboard: React.FC = () => {
       />
 
       {/* Upload Section */}
-      <UploadSection onUpload={() => {}} />
+      <UploadSection 
+        onUpload={() => {}} 
+        onUploadStart={() => {
+          setModalTitle('Cargando Archivo')
+          setModalContent('Procesando archivo Excel. Por favor espere...')
+          setModalLoading(true)
+          setUploadModalOpen(true)
+        }}
+        onUploadComplete={() => {
+          setModalLoading(false)
+          setModalTitle('Carga Completada')
+          setModalContent('El archivo se ha procesado exitosamente.')
+        }}
+        onUploadError={(error) => {
+          setModalLoading(false)
+          setModalTitle('Error en la Carga')
+          setModalContent(error || 'No se pudo procesar el archivo. Por favor intente nuevamente.')
+        }}
+      />
 
       {error && (
         <Alert 
@@ -1081,6 +1099,7 @@ const Dashboard: React.FC = () => {
       {/* Events Table */}
       <EventsTable
         events={filteredEvents}
+        totalEvents={currentReport ? currentReport.events.length : 0}
         getAlarmColor={getAlarmColor}
       />
         </>
@@ -1107,19 +1126,54 @@ const Dashboard: React.FC = () => {
       <Box
         component="footer"
         sx={{
-          py: 2,
+          py: 3,
           px: 3,
           mt: 'auto',
           borderTop: '1px solid rgba(0, 0, 0, 0.1)',
           backgroundColor: 'background.paper',
-          textAlign: 'center'
+          textAlign: 'center',
+          borderRadius: 3,
+          mx: 3,
+          mb: 3
         }}
       >
-        <Typography variant="body2" color="text.secondary">
-          © {new Date().getFullYear()} West Ingeniería - Sistema de Análisis de Alarmas
+        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+          ® {new Date().getFullYear()} West Ingeniería - Sistema de Análisis de Alarmas
         </Typography>
-        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
-          Todos los derechos reservados
+        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+          Creado con ❤️ por Rodrigo Yáñez G. -{' '}
+          <Typography
+            component="a"
+            href="https://ninfasolutions.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            variant="caption"
+            sx={{
+              color: 'primary.main',
+              textDecoration: 'none',
+              '&:hover': {
+                textDecoration: 'underline',
+              }
+            }}
+          >
+            Ninfa Solutions
+          </Typography>
+        </Typography>
+        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+          <Typography
+            component="a"
+            href="mailto:admin@ninfasolutions.com"
+            variant="caption"
+            sx={{
+              color: 'primary.main',
+              textDecoration: 'none',
+              '&:hover': {
+                textDecoration: 'underline',
+              }
+            }}
+          >
+            admin@ninfasolutions.com
+          </Typography>
         </Typography>
       </Box>
     </Box>
