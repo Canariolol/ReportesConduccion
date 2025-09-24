@@ -120,3 +120,7 @@ private_key.txt
 backend/west-reportes-conduccion-firebase-adminsdk-fbsvc-12d6ff8c91.json
 backend/serviceAccount.json
 DEPLOY_COMMANDS.md
+.contexto/AICONTEXT.md
+.contexto/PLAN_MIGRACION.md
+.contexto/PRD.md
+.contexto/README.md
