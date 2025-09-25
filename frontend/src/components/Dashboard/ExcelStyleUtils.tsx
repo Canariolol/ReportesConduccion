@@ -113,51 +113,60 @@ export const applyEnhancedStyles = (workbook: XLSX.WorkBook) => {
 
 // Estilos para la hoja "Resumen"
 const styleSummarySheet = (worksheet: XLSX.WorkSheet) => {
+  // Verificar que la hoja existe
+  if (!worksheet) return;
+
   // Ancho de columnas
   worksheet['!cols'] = [{ wch: 25 }, { wch: 40 }];
 
+  // Función segura para aplicar estilos a celdas
+  const applyCellStyle = (cellRef: string, style: any) => {
+    if (worksheet[cellRef]) {
+      worksheet[cellRef].s = style;
+    }
+  };
+
   // Título principal
-  worksheet['A1'].s = FONT_STYLES.title;
+  applyCellStyle('A1', FONT_STYLES.title);
   if (!worksheet['!merges']) worksheet['!merges'] = [];
   worksheet['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } });
 
-  // Bloque de información
+  // Bloque de información (filas 2-5)
   for (let i = 2; i <= 5; i++) {
-    worksheet[`A${i}`].s = FONT_STYLES.infoLabel;
-    worksheet[`B${i}`].s = FONT_STYLES.infoValue;
+    applyCellStyle(`A${i}`, FONT_STYLES.infoLabel);
+    applyCellStyle(`B${i}`, FONT_STYLES.infoValue);
   }
 
-  // Subtítulo "Resumen de Métricas"
-  worksheet['A7'].s = FONT_STYLES.subtitle;
+  // Subtítulo "Resumen de Métricas" (fila 7)
+  applyCellStyle('A7', FONT_STYLES.subtitle);
 
-  // Tabla de Métricas
-  worksheet['A8'].s = FONT_STYLES.metricsHeader;
-  worksheet['B8'].s = FONT_STYLES.metricsHeader;
+  // Tabla de Métricas (fila 8 cabecera, filas 9-11 datos)
+  applyCellStyle('A8', FONT_STYLES.metricsHeader);
+  applyCellStyle('B8', FONT_STYLES.metricsHeader);
   for (let i = 9; i <= 11; i++) {
-    worksheet[`A${i}`].s = FONT_STYLES.data;
-    worksheet[`B${i}`].s = FONT_STYLES.dataCenter;
+    applyCellStyle(`A${i}`, FONT_STYLES.data);
+    applyCellStyle(`B${i}`, FONT_STYLES.dataCenter);
   }
 
-  // Subtítulo "Resumen por Alarma"
-  worksheet['A13'].s = FONT_STYLES.subtitle;
+  // Subtítulo "Resumen por Alarma" (fila 13)
+  applyCellStyle('A13', FONT_STYLES.subtitle);
 
-  // Tabla de Resumen por Alarma
-  worksheet['A14'].s = FONT_STYLES.alarmsHeader;
-  worksheet['B14'].s = FONT_STYLES.alarmsHeader;
+  // Tabla de Resumen por Alarma (fila 14 cabecera, filas siguientes datos)
+  applyCellStyle('A14', FONT_STYLES.alarmsHeader);
+  applyCellStyle('B14', FONT_STYLES.alarmsHeader);
   
   const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
   for (let row = 14; row <= range.e.r; row++) {
-    if (worksheet[`A${row + 1}`]) {
-        worksheet[`A${row + 1}`].s = FONT_STYLES.data;
-    }
-    if (worksheet[`B${row + 1}`]) {
-        worksheet[`B${row + 1}`].s = FONT_STYLES.dataCenter;
-    }
+    applyCellStyle(`A${row + 1}`, FONT_STYLES.data);
+    applyCellStyle(`B${row + 1}`, FONT_STYLES.dataCenter);
   }
 };
 
 // Estilos para la hoja "Eventos Filtrados"
 const styleEventsSheet = (worksheet: XLSX.WorkSheet) => {
+  // Verificar que la hoja existe
+  if (!worksheet) return;
+
   // Ancho de columnas
   worksheet['!cols'] = [
     { wch: 20 }, // Fecha y Hora
@@ -168,22 +177,26 @@ const styleEventsSheet = (worksheet: XLSX.WorkSheet) => {
     { wch: 50 }, // Comentarios
   ];
 
+  // Función segura para aplicar estilos a celdas
+  const applyCellStyle = (cellRef: string, style: any) => {
+    if (worksheet[cellRef]) {
+      worksheet[cellRef].s = style;
+    }
+  };
+
   const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+  
   // Estilo del encabezado
   for (let col = range.s.c; col <= range.e.c; col++) {
     const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
-    if (worksheet[cellAddress]) {
-      worksheet[cellAddress].s = FONT_STYLES.eventsHeader;
-    }
+    applyCellStyle(cellAddress, FONT_STYLES.eventsHeader);
   }
 
   // Estilo de las filas de datos (solo bordes y alineación)
   for (let row = 1; row <= range.e.r; row++) {
     for (let col = 0; col <= range.e.c; col++) {
         const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
-        if (worksheet[cellAddress]) {
-            worksheet[cellAddress].s = FONT_STYLES.data;
-        }
+        applyCellStyle(cellAddress, FONT_STYLES.data);
     }
   }
 };
