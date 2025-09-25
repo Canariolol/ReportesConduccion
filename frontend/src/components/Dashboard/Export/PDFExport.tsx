@@ -9,18 +9,16 @@ interface ChartCaptureResult {
   height: number;
 }
 
-const PDFExport = forwardRef<HTMLButtonElement, PDFExportProps>((props, ref) => {
-  const {
-    currentReport,
-    selectedCompany,
-    filteredEvents,
-    filteredEventsCount,
-    pieChartRef,
-    areaChartRef,
-    lineChartRef,
-    callbacks
-  } = props;
-
+const PDFExport = forwardRef<HTMLButtonElement, PDFExportProps>(({
+  currentReport,
+  selectedCompany,
+  filteredEvents,
+  filteredEventsCount,
+  pieChartRef,
+  areaChartRef,
+  lineChartRef,
+  callbacks
+}, ref) => {
   const exportToPDF = async () => {
     if (!currentReport) return;
     
@@ -58,7 +56,7 @@ const PDFExport = forwardRef<HTMLButtonElement, PDFExportProps>((props, ref) => 
             const logoBase64 = await blobToBase64(logoBlob);
             
             // Agregar logo como marca de agua en todas las páginas
-            const totalPages = pdf.internal.getNumberOfPages();
+            const totalPages = pdf.getNumberOfPages();
             for (let i = 1; i <= totalPages; i++) {
               pdf.setPage(i);
               // Logo con dimensiones proporcionales para mantener proporción original
@@ -456,7 +454,7 @@ const PDFExport = forwardRef<HTMLButtonElement, PDFExportProps>((props, ref) => 
       await addWatermark();
       
       // Agregar footer a todas las páginas
-      const totalPages = pdf.internal.getNumberOfPages();
+      const totalPages = pdf.getNumberOfPages();
       for (let i = 1; i <= totalPages; i++) {
         pdf.setPage(i);
         addFooter(i, totalPages);
@@ -492,6 +490,6 @@ const PDFExport = forwardRef<HTMLButtonElement, PDFExportProps>((props, ref) => 
       Exportar PDF
     </button>
   );
-});
+};
 
 export default PDFExport;
