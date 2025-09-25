@@ -1,8 +1,8 @@
 import React from 'react';
 import { Card, CardContent, Box, Typography, Grid, TextField, MenuItem, FormControl, InputLabel, Select, OutlinedInput, Divider } from '@mui/material';
 import { FilterList } from '@mui/icons-material';
-import { DateRangePicker } from '../ui/date-range-picker';
-import { DateRange } from 'react-day-picker';
+import { DateRangePicker, DateRange } from '../ui/date-range-picker';
+import { Dayjs } from 'dayjs';
 
 interface FiltersProps {
   filters: {
@@ -19,26 +19,16 @@ interface FiltersProps {
 
 const Filters: React.FC<FiltersProps> = ({ filters, alarmTypes, vehiclePlate, onFilterChange }) => {
 
-  const handleDateRangeChange = (date: DateRange | undefined) => {
+  const handleDateRangeChange = (date: DateRange) => {
     onFilterChange('dateRange', date);
   };
 
-  const parseDate = (dateString: string): Date | undefined => {
-    if (!dateString) return undefined;
-    const parts = dateString.split('-');
-    if (parts.length === 3) {
-      const [day, month, year] = parts.map(Number);
-      if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
-        return new Date(year, month - 1, day);
-      }
-    }
-    return new Date(dateString); // Fallback for other formats
+  // The new picker works with `Date` objects (or dayjs objects), not strings.
+  // We convert the filter strings to Date objects for the picker.
+  const date = {
+    from: filters.fechaInicio ? new Date(filters.fechaInicio) : undefined,
+    to: filters.fechaFin ? new Date(filters.fechaFin) : undefined,
   };
-
-  const date: DateRange | undefined = filters.fechaInicio ? {
-    from: parseDate(filters.fechaInicio),
-    to: filters.fechaFin ? parseDate(filters.fechaFin) : undefined
-  } : undefined;
 
   return (
     <Card sx={{ mb: 3 }}>
@@ -59,19 +49,31 @@ const Filters: React.FC<FiltersProps> = ({ filters, alarmTypes, vehiclePlate, on
                 value={filters.tipo}
                 onChange={(e) => {
                   const selectedValues = e.target.value as string[];
+                  console.log('🔄 Filters.tsx - onChange:', selectedValues);
+                  
+                  // Si se selecciona "todos", establecer solo ['todos']
                   if (selectedValues.includes('todos')) {
-                    if (filters.tipo.includes('todos')) {
-                      onFilterChange('tipo', alarmTypes);
-                    } else {
-                      onFilterChange('tipo', ['todos']);
-                    }
-                  } else {
+                    onFilterChange('tipo', ['todos']);
+                  } 
+                  // Si se deselecciona "todos" pero hay otros valores, mantener esos valores
+                  else if (selectedValues.length > 0) {
                     onFilterChange('tipo', selectedValues);
+                  }
+                  // Si no hay nada seleccionado, establecer todos los tipos
+                  else {
+                    onFilterChange('tipo', alarmTypes);
                   }
                 }}
                 input={<OutlinedInput label="Tipo de Alarma" />}
                 renderValue={(selected) => {
-                  if (selected.length === 0 || selected.includes('todos')) {
+                  console.log('🔄 Filters.tsx - renderValue:', selected);
+                  if (selected.length === 0) {
+                    return 'Todos los tipos';
+                  }
+                  if (selected.includes('todos')) {
+                    return 'Todos los tipos';
+                  }
+                  if (selected.length === alarmTypes.length) {
                     return 'Todos los tipos';
                   }
                   return selected.join(', ');
