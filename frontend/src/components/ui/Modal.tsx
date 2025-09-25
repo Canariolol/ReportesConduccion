@@ -15,9 +15,10 @@ interface ModalProps {
   open: boolean
   onClose: () => void
   title: string
-  content: string
+  content?: string // Make content optional
   loading?: boolean
   actions?: React.ReactNode
+  children?: React.ReactNode // Add children prop
 }
 
 const Modal: React.FC<ModalProps> = ({ 
@@ -26,7 +27,8 @@ const Modal: React.FC<ModalProps> = ({
   title, 
   content, 
   loading = false,
-  actions 
+  actions, 
+  children // Destructure children
 }) => {
   return (
     <Dialog 
@@ -46,20 +48,22 @@ const Modal: React.FC<ModalProps> = ({
         alignItems: 'center', 
         gap: 2,
         pb: 2,
-        borderBottom: '1px solid rgba(0,0,0,0.1)'
+        borderBottom: '1px solid rgba(0,0,0,0.1)',
+        typography: 'h6', // Apply typography variant directly
+        fontWeight: 600,   // Apply font weight directly
       }}>
         {loading && (
           <CircularProgress size={20} thickness={3} />
         )}
-        <Typography variant="h6" sx={{ fontWeight: 600 }}>
-          {title}
-        </Typography>
+        {title}
       </DialogTitle>
       
       <DialogContent sx={{ py: 3 }}>
-        <DialogContentText sx={{ color: 'text.secondary' }}>
-          {content}
-        </DialogContentText>
+        {children || (
+          <DialogContentText sx={{ color: 'text.secondary' }}>
+            {content || ''}
+          </DialogContentText>
+        )}
       </DialogContent>
       
       <DialogActions sx={{ px: 3, pb: 3, pt: 2 }}>

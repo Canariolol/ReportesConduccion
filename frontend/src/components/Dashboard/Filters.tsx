@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent, Box, Typography, Grid, TextField, MenuItem, FormControl, InputLabel, Select, OutlinedInput, Divider } from '@mui/material';
 import { FilterList } from '@mui/icons-material';
-import DateRangePicker from '../ui/date-range-picker';
+import { DateRangePicker } from '../ui/date-range-picker';
 import { DateRange } from 'react-day-picker';
 
 interface FiltersProps {

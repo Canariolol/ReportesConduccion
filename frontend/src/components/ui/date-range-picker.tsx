@@ -1,13 +1,19 @@
 'use client'
 
 import * as React from "react"
-import { format } from "date-fns"
+import { format, isAfter } from "date-fns"
 import { es } from "date-fns/locale"
 import { Calendar as CalendarIcon } from "lucide-react"
 import { DateRange } from "react-day-picker"
 
-import { Button, Popover } from '@mui/material'
+import { Button, Box } from '@mui/material'
 import { Calendar } from "./calendar"
+import Modal from './Modal'
+
+// Helper function to format weekday names
+const formatWeekdayName = (day: Date, options?: { locale?: any }) => {
+  return format(day, 'EEEEE', { locale: options?.locale }).charAt(0).toUpperCase();
+};
 
 interface DateRangePickerProps {
   date: DateRange | undefined
@@ -15,26 +21,55 @@ interface DateRangePickerProps {
   className?: string
 }
 
-export default function DateRangePicker({ date, onDateChange, className }: DateRangePickerProps) {
-  const [anchorEl, setAnchorEl] = React.useState<HTMLButtonElement | null>(null);
+export function DateRangePicker({ date, onDateChange, className }: DateRangePickerProps) {
+  const [open, setOpen] = React.useState(false);
+  const [localDate, setLocalDate] = React.useState<DateRange | undefined>(date);
 
-  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
+  React.useEffect(() => {
+    setLocalDate(date);
+  }, [date]);
 
+  const handleOpen = () => setOpen(true);
   const handleClose = () => {
-    setAnchorEl(null);
+    setOpen(false);
   };
 
-  const open = Boolean(anchorEl);
-  const id = open ? 'date-range-popover' : undefined;
+  const handleDayClick = (day: Date) => {
+    if (localDate?.from && localDate.to) {
+      setLocalDate({ from: day, to: undefined });
+    } else if (localDate?.from) {
+      if (isAfter(day, localDate.from)) {
+        setLocalDate({ from: localDate.from, to: day });
+      } else {
+        setLocalDate({ from: day, to: localDate.from });
+      }
+    } else {
+      setLocalDate({ from: day, to: undefined });
+    }
+  };
+
+  const handleClear = () => {
+    setLocalDate(undefined);
+  };
+
+  const handleConfirm = () => {
+    onDateChange(localDate);
+    handleClose();
+  };
+
+  const modalActions = (
+    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, width: '100%' }}>
+      <Button variant="outlined" onClick={handleClear}>Limpiar</Button>
+      <Button variant="contained" onClick={handleConfirm}>Confirmar</Button>
+    </Box>
+  );
 
   return (
     <div className={className}>
       <Button
         id="date"
         variant="outlined"
-        onClick={handleClick}
+        onClick={handleOpen}
         sx={{
           width: '100%',
           justifyContent: 'flex-start',
@@ -62,25 +97,26 @@ export default function DateRangePicker({ date, onDateChange, className }: DateR
           <span>dd-mm-yyyy - dd-mm-yyyy</span>
         )}
       </Button>
-      <Popover
-        id={id}
+
+      <Modal
         open={open}
-        anchorEl={anchorEl}
         onClose={handleClose}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'left',
-        }}
+        title="Seleccionar Rango de Fechas"
+        actions={modalActions}
       >
-        <Calendar
-          initialFocus
-          mode="range"
-          defaultMonth={date?.from}
-          selected={date}
-          onSelect={onDateChange}
-          numberOfMonths={1}
-        />
-      </Popover>
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: -2 }}>
+          <Calendar
+            initialFocus
+            mode="range"
+            defaultMonth={localDate?.from}
+            selected={localDate}
+            onDayClick={handleDayClick}
+            numberOfMonths={1}
+            formatters={{ formatWeekdayName }}
+            locale={es}
+          />
+        </Box>
+      </Modal>
     </div>
   )
 }
