@@ -75,12 +75,24 @@ export function DateRangePicker({ date, onDateChange }: DateRangePickerProps) {
         }}
       >
         <Box sx={{
-          fontSize: '0.875rem',
+          fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+          color: '#333',
+          fontSize: '0.8rem', // Smaller base font
           p: 1.5,
+
+          // --- Theme Colors ---
           '--rdp-accent-color': '#1976d2',
           '--rdp-range_middle-background-color': '#e3f2fd',
-          '--rdp-day-height': '36px',
-          '--rdp-day-width': '36px',
+
+          // --- Sizing & Spacing ---
+          '--rdp-months-gap': '0.5rem',      // Space between months
+          '--rdp-day-height': '32px',        // Row height for a day
+          '--rdp-day-width': '32px',         // Col width for a day
+          '--rdp-day_button-height': '28px',
+          '--rdp-day_button-width': '28px',
+          '--rdp-nav-height': '1.5rem',
+          '--rdp-nav_button-height': '1.5rem',
+          '--rdp-nav_button-width': '1.5rem',
         }}>
           <DayPicker
             mode="range"
