@@ -1,4 +1,3 @@
-@echo off
 echo Limpiando instalacion previa...
 pip cache purge
 

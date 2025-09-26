@@ -1012,3 +1012,65 @@ Este enfoque resuelve definitivamente el problema porque:
 
 --- 
 **Estado**: Quinta corrección de urgente implementada con inicialización automática. Sistema ahora debería mostrar todos los datos inmediatamente al cargar archivos.
+
+## 🚀 Refactorización Masiva de Dashboard (26 de septiembre de 2025)
+
+### 🎯 Objetivo Principal
+Refactorizar el componente `Dashboard.tsx` que superaba las 1000 líneas, para mejorar la mantenibilidad, separar responsabilidades y facilitar futuras modificaciones.
+
+### 🔧 Cambios Implementados
+
+Se ha descompuesto el monolítico `Dashboard.tsx` en una estructura de componentes, hooks y utilidades más cohesiva y mantenible.
+
+#### 1. Creación de Hook de Estado (`useDashboardState.ts`)
+- **Archivo Creado**: `frontend/src/hooks/useDashboardState.ts`
+- **Responsabilidad**: Centraliza toda la lógica de estado del dashboard, incluyendo:
+    - Gestión de filtros (`filters`, `setFilters`, `handleFilterChange`).
+    - Estado de modales (`uploadModalOpen`, `exportModalOpen`, etc.).
+    - Gestión de la empresa seleccionada (`selectedCompany`, `availableCompanies`).
+    - Funciones para procesar y derivar datos para los gráficos (`getAlarmsByHour`, `getFilteredAlarmTypes`, `getFilteredDailyEvolution`).
+    - Lógica de filtrado de eventos (`getFilteredEvents`).
+
+#### 2. Extracción de Lógica de Exportación (`export.ts`)
+- **Archivo Creado**: `frontend/src/lib/export.ts`
+- **Responsabilidad**: Contiene las funciones `exportToExcel` y `exportToPDF`, que antes estaban dentro del componente `Dashboard`. Ahora reciben los datos y referencias necesarios como parámetros.
+
+#### 3. Creación de Componente de Contenido (`DashboardContent.tsx`)
+- **Archivo Creado**: `frontend/src/components/Dashboard/DashboardContent.tsx`
+- **Responsabilidad**: Renderiza toda la sección principal del dashboard que aparece cuando un reporte (`currentReport`) está cargado. Esto incluye las tarjetas de métricas, los gráficos, los filtros y la tabla de eventos. Recibe todos los datos y manejadores de eventos como props.
+
+#### 4. Creación de Componente de Pie de Página (`Footer.tsx`)
+- **Archivo Creado**: `frontend/src/components/common/Footer.tsx`
+- **Responsabilidad**: Componente reutilizable que renderiza el pie de página de la aplicación.
+
+#### 5. Simplificación de `Dashboard.tsx`
+- **Archivo Modificado**: `frontend/src/pages/Dashboard.tsx`
+- **Resultado**: El componente principal ahora actúa como un orquestador.
+    - Llama al hook `useDashboardState` para obtener el estado y la lógica.
+    - Renderiza los componentes principales (`Header`, `UploadSection`, `DashboardContent`, `Footer`, `Modal`).
+    - Pasa las props necesarias a los componentes hijos.
+    - Su tamaño se ha reducido drásticamente, mejorando su legibilidad.
+
+### 📁 Estructura de Archivos Resultante
+
+```
+frontend/
+├── src/
+│   ├── components/
+│   │   ├── common/
+│   │   │   └── Footer.tsx             # (Nuevo)
+│   │   └── Dashboard/
+│   │       └── DashboardContent.tsx   # (Nuevo)
+│   ├── hooks/
+│   │   └── useDashboardState.ts     # (Nuevo)
+│   ├── lib/
+│   │   └── export.ts              # (Nuevo)
+│   └── pages/
+│       └── Dashboard.tsx            # (Refactorizado)
+```
+
+### ✅ Beneficios Obtenidos
+- **Mantenibilidad**: El código es mucho más fácil de entender, depurar y modificar.
+- **Separación de Responsabilidades (SoC)**: La lógica de estado, la lógica de negocio (exportación) y la presentación están ahora en archivos separados.
+- **Reusabilidad**: Componentes como `Footer` pueden ser reutilizados en otras partes de la aplicación.
+- **Escalabilidad**: Es más sencillo añadir nuevas funcionalidades sin afectar el resto de la aplicación.
