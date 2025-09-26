@@ -157,8 +157,35 @@ export function DateRangePicker({ date, onDateChange, className }: DateRangePick
   const handleCalendarClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    console.log("¡Hola! Has hecho clic en el icono del calendario. Abriendo popover simple...");
     setPopoverOpen(true);
   };
+
+  // Función para cerrar el popover al hacer clic fuera
+  const handleClickOutside = (e: MouseEvent) => {
+    if (popoverOpen && e.target instanceof Element) {
+      const popover = document.querySelector('[data-popover="date-range-picker"]');
+      const calendarButton = document.querySelector('[data-calendar-button="true"]');
+      
+      if (popover && !popover.contains(e.target) && 
+          calendarButton && !calendarButton.contains(e.target)) {
+        setPopoverOpen(false);
+      }
+    }
+  };
+
+  // Efecto para manejar clics fuera del popover
+  React.useEffect(() => {
+    if (popoverOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    } else {
+      document.removeEventListener('mousedown', handleClickOutside);
+    }
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [popoverOpen]);
 
   return (
     <div className={className}>
@@ -290,6 +317,7 @@ export function DateRangePicker({ date, onDateChange, className }: DateRangePick
         <Button
           size="small"
           onClick={handleCalendarClick}
+          data-calendar-button="true"
           sx={{ 
             minWidth: '24px', 
             height: '24px', 
@@ -302,9 +330,10 @@ export function DateRangePicker({ date, onDateChange, className }: DateRangePick
         </Button>
       </Box>
 
-      {/* Popover simple sin react-aria-components */}
+      {/* Popover simple desde cero - solo un recuadro en blanco */}
       {popoverOpen && (
         <Box 
+          data-popover="date-range-picker"
           sx={{
             position: 'absolute',
             top: '100%',
@@ -317,21 +346,24 @@ export function DateRangePicker({ date, onDateChange, className }: DateRangePick
             borderRadius: '4px',
             boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
             padding: '16px',
+            width: '300px',
+            height: '200px',
           }}
         >
-          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-            <Calendar
-              initialFocus
-              mode="range"
-              defaultMonth={localDate?.from}
-              selected={localDate}
-              onDayClick={handleDayClick}
-              numberOfMonths={1}
-              formatters={{ formatWeekdayName }}
-              locale={es}
-            />
+          {/* Recuadro en blanco - nada más por ahora */}
+          <Box sx={{ 
+            width: '100%', 
+            height: '100%', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            border: '1px dashed rgba(0, 0, 0, 0.2)',
+            borderRadius: '4px',
+            color: 'rgba(0, 0, 0, 0.5)',
+            fontSize: '14px',
+          }}>
+            Popover simple desde cero
           </Box>
-          {popoverActions}
         </Box>
       )}
     </div>

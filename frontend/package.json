@@ -31,7 +31,7 @@
     "jspdf": "^3.0.3",
     "lucide-react": "^0.544.0",
     "react": "^18.2.0",
-    "react-aria-components": "^1.12.2",
+    "react-day-picker": "^9.11.0",
     "react-dom": "^18.2.0",
     "react-dropzone": "^14.2.3",
     "react-hook-form": "^7.48.2",

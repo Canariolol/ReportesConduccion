@@ -1,3 +1,5 @@
+echo.
+cd backend
 echo Limpiando instalacion previa...
 pip cache purge
 
