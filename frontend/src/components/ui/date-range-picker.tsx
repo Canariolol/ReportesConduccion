@@ -4,6 +4,7 @@ import { es } from 'date-fns/locale';
 import { DateRange, DayPicker } from 'react-day-picker';
 import { Popover, Box, OutlinedInput, InputAdornment, IconButton } from '@mui/material';
 import { CalendarIcon } from 'lucide-react';
+import { Check as CheckIcon, DeleteOutline as DeleteIcon } from '@mui/icons-material';
 
 // Import the official stylesheet
 import 'react-day-picker/dist/style.css';
@@ -24,6 +25,10 @@ export function DateRangePicker({ date, onDateChange }: DateRangePickerProps) {
     setAnchorEl(null);
   };
 
+  const handleClear = () => {
+    onDateChange(undefined);
+  };
+
   const open = Boolean(anchorEl);
   const id = open ? 'date-range-popover' : undefined;
 
@@ -41,8 +46,8 @@ export function DateRangePicker({ date, onDateChange }: DateRangePickerProps) {
         readOnly
         fullWidth
         sx={{ 
-          pr: 1, // Add some padding to the right to not overlap with the icon button
-          backgroundColor: 'white', // Match other inputs
+          pr: 1,
+          backgroundColor: 'white',
         }}
         endAdornment={
           <InputAdornment position="end">
@@ -61,16 +66,40 @@ export function DateRangePicker({ date, onDateChange }: DateRangePickerProps) {
           vertical: 'bottom',
           horizontal: 'left',
         }}
+        PaperProps={{
+          sx: {
+            borderRadius: '16px',
+            boxShadow: '0 4px 20px rgb(0 0 0 / 0.1)',
+            mt: 1,
+          }
+        }}
       >
-        <DayPicker
-          mode="range"
-          selected={date}
-          onSelect={onDateChange}
-          locale={es}
-          numberOfMonths={2}
-          defaultMonth={date?.from || new Date()}
-          showOutsideDays
-        />
+        <Box sx={{
+          fontSize: '0.875rem',
+          p: 1.5,
+          '--rdp-accent-color': '#1976d2',
+          '--rdp-range_middle-background-color': '#e3f2fd',
+          '--rdp-day-height': '36px',
+          '--rdp-day-width': '36px',
+        }}>
+          <DayPicker
+            mode="range"
+            selected={date}
+            onSelect={onDateChange}
+            locale={es}
+            numberOfMonths={2}
+            defaultMonth={date?.from || new Date()}
+            showOutsideDays
+          />
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1, pt: 1, borderTop: '1px solid #eee' }}>
+            <IconButton onClick={handleClear} size="small" title="Limpiar">
+                <DeleteIcon fontSize="small" />
+            </IconButton>
+            <IconButton onClick={handleClose} size="small" color="primary" title="Confirmar" sx={{ ml: 0.5 }}>
+                <CheckIcon fontSize="small" />
+            </IconButton>
+          </Box>
+        </Box>
       </Popover>
     </div>
   );
