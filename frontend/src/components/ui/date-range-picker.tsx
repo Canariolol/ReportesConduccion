@@ -8,7 +8,6 @@ import { DateRange } from "react-day-picker"
 
 import { Button, Box, TextField, InputAdornment } from '@mui/material'
 import { Calendar } from "./calendar"
-import { Popover, PopoverTrigger, PopoverDialog } from "./popover"
 
 // Helper function to format weekday names
 const formatWeekdayName = (day: Date, options?: { locale?: any }) => {
@@ -154,6 +153,13 @@ export function DateRangePicker({ date, onDateChange, className }: DateRangePick
     }
   };
 
+  // Función para manejar el click del botón del calendario
+  const handleCalendarClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setPopoverOpen(true);
+  };
+
   return (
     <div className={className}>
       <Box sx={{ 
@@ -281,25 +287,38 @@ export function DateRangePicker({ date, onDateChange, className }: DateRangePick
         </Box>
 
         {/* Botón del calendario - tamaño fijo pequeño */}
-        <PopoverTrigger>
-          <Button
-            size="small"
-            onClick={() => setPopoverOpen(true)}
-            sx={{ 
-              minWidth: '24px', 
-              height: '24px', 
-              padding: '2px',
-              borderRadius: '4px',
-              flexShrink: 0, // No permitir que se encoja
-            }}
-          >
-            <CalendarIcon style={{ height: '14px', width: '14px' }} />
-          </Button>
-        </PopoverTrigger>
+        <Button
+          size="small"
+          onClick={handleCalendarClick}
+          sx={{ 
+            minWidth: '24px', 
+            height: '24px', 
+            padding: '2px',
+            borderRadius: '4px',
+            flexShrink: 0, // No permitir que se encoja
+          }}
+        >
+          <CalendarIcon style={{ height: '14px', width: '14px' }} />
+        </Button>
       </Box>
 
-      <Popover isOpen={popoverOpen} onOpenChange={setPopoverOpen}>
-        <PopoverDialog>
+      {/* Popover simple sin react-aria-components */}
+      {popoverOpen && (
+        <Box 
+          sx={{
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            right: 0,
+            zIndex: 9999,
+            mt: 1,
+            backgroundColor: 'white',
+            border: '1px solid rgba(0, 0, 0, 0.23)',
+            borderRadius: '4px',
+            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+            padding: '16px',
+          }}
+        >
           <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
             <Calendar
               initialFocus
@@ -313,8 +332,8 @@ export function DateRangePicker({ date, onDateChange, className }: DateRangePick
             />
           </Box>
           {popoverActions}
-        </PopoverDialog>
-      </Popover>
+        </Box>
+      )}
     </div>
   )
 }

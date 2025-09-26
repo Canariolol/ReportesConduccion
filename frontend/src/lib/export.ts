@@ -55,23 +55,31 @@ export const exportToExcel = (
         // --- ACTUALIZAR HOJA DE RESUMEN ---
         const summarySheet = workbook.Sheets['Resumen'];
         if (summarySheet) {
-          // Actualizar datos básicos
-          const updateCell = (cellRef: string, value: any) => {
+          // Función de ayuda para actualizar o crear una celda de forma segura
+          const updateCell = (cellRef: string, value: any, cellType: string = 's') => {
+            // Usamos sheet_add_aoa para asegurar que la celda se cree si no existe
+            // y que el rango de la hoja se actualice correctamente.
+            XLSX.utils.sheet_add_aoa(summarySheet, [[value]], { origin: cellRef });
+            
+            // Forzamos el tipo de celda, ya que sheet_add_aoa puede inferir incorrectamente.
             if (summarySheet[cellRef]) {
-              summarySheet[cellRef].v = value;
+              summarySheet[cellRef].t = cellType;
             }
           };
 
           // Actualizar información del reporte
-          updateCell('B3', selectedCompany || 'N/A');
-          updateCell('B4', currentReport.vehicle_plate);
-          updateCell('B5', currentReport.file_name);
-          updateCell('B6', format(new Date(), 'dd/MM/yyyy HH:mm'));
+          updateCell('B2', selectedCompany || 'N/A', 's');
+          updateCell('B3', currentReport.vehicle_plate, 's');
+          updateCell('B4', currentReport.file_name, 's');
+          updateCell('B5', format(new Date(), 'dd/MM/yyyy HH:mm'), 's');
 
           // Actualizar métricas
-          updateCell('B9', currentReport.summary.totalAlarms);
-          updateCell('B10', Object.keys(currentReport.summary.alarmTypes).length);
-          updateCell('B11', filteredEvents.length);
+          updateCell('A9', 'Total de Alarmas', 's');
+          updateCell('B9', currentReport.summary.totalAlarms, 'n');
+          updateCell('A10', 'Tipos de Alarma', 's');
+          updateCell('B10', Object.keys(currentReport.summary.alarmTypes).length, 'n');
+          updateCell('A11', 'Eventos Filtrados', 's');
+          updateCell('B11', filteredEvents.length, 'n');
 
           // Actualizar tabla de resumen por alarma
           const alarmSummaryData = Object.entries(currentReport.summary.alarmTypes).map(([type, count]) => [
@@ -79,20 +87,16 @@ export const exportToExcel = (
             count,
           ]);
 
-          // Encontrar la fila donde empieza la tabla de alarmas (usualmente fila 15)
-          let startRow = 15;
-          for (let i = 0; i < alarmSummaryData.length; i++) {
-            updateCell(`A${startRow + i}`, alarmSummaryData[i][0]);
-            updateCell(`B${startRow + i}`, alarmSummaryData[i][1]);
-          }
+          // Usar sheet_add_aoa para insertar los datos de forma segura, comenzando en la celda A15
+          XLSX.utils.sheet_add_aoa(summarySheet, alarmSummaryData, { origin: 'A15' });
         }
 
         // --- ACTUALIZAR HOJA DE EVENTOS FILTRADOS ---
         const eventsSheet = workbook.Sheets['Eventos Filtrados'];
         if (eventsSheet) {
-          // Limpiar datos existentes (mantener encabezados)
+          // Limpiar datos existentes (mantener encabezados en la fila 1)
           const range = XLSX.utils.decode_range(eventsSheet['!ref'] || 'A1');
-          for (let row = 2; row <= range.e.r; row++) {
+          for (let row = 1; row <= range.e.r; row++) { // Empezar a limpiar desde la fila 2 (índice 1)
             for (let col = range.s.c; col <= range.e.c; col++) {
               const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
               if (eventsSheet[cellAddress]) {
@@ -103,35 +107,39 @@ export const exportToExcel = (
 
           // Agregar nuevos datos
           filteredEvents.forEach((event, index) => {
-            const rowIndex = index + 2; // Empezar en fila 2 (después del encabezado)
+            const rowIndex = index + 1; // Empezar a escribir en la fila 2 (índice 1)
             
+            // Enumeración
+            const numCell = XLSX.utils.encode_cell({ r: rowIndex, c: 0 });
+            eventsSheet[numCell] = { t: 'n', v: index + 1 };
+
             // Fecha y Hora
-            const dateCell = XLSX.utils.encode_cell({ r: rowIndex, c: 0 });
+            const dateCell = XLSX.utils.encode_cell({ r: rowIndex, c: 1 });
             eventsSheet[dateCell] = { t: 's', v: formatTimestamp(event.timestamp) };
             
             // Patente
-            const plateCell = XLSX.utils.encode_cell({ r: rowIndex, c: 1 });
+            const plateCell = XLSX.utils.encode_cell({ r: rowIndex, c: 2 });
             eventsSheet[plateCell] = { t: 's', v: event.vehiclePlate };
             
             // Tipo de Alarma
-            const typeCell = XLSX.utils.encode_cell({ r: rowIndex, c: 2 });
+            const typeCell = XLSX.utils.encode_cell({ r: rowIndex, c: 3 });
             eventsSheet[typeCell] = { t: 's', v: alarmNameMapping[event.alarmType.toLowerCase()] || event.alarmType };
             
             // Conductor
-            const driverCell = XLSX.utils.encode_cell({ r: rowIndex, c: 3 });
+            const driverCell = XLSX.utils.encode_cell({ r: rowIndex, c: 4 });
             eventsSheet[driverCell] = { t: 's', v: event.driver || 'Sin conductor' };
             
             // Empresa
-            const companyCell = XLSX.utils.encode_cell({ r: rowIndex, c: 4 });
+            const companyCell = XLSX.utils.encode_cell({ r: rowIndex, c: 5 });
             eventsSheet[companyCell] = { t: 's', v: getEventCompanyName(event) };
             
             // Comentarios
-            const commentsCell = XLSX.utils.encode_cell({ r: rowIndex, c: 5 });
+            const commentsCell = XLSX.utils.encode_cell({ r: rowIndex, c: 6 });
             eventsSheet[commentsCell] = { t: 's', v: event.comments || 'Sin comentarios' };
           });
 
-          // Actualizar el rango de la hoja
-          const newRange = XLSX.utils.decode_range('A1:F' + (filteredEvents.length + 1));
+          // Actualizar el rango de la hoja a 7 columnas (A-G)
+          const newRange = XLSX.utils.decode_range('A1:G' + (filteredEvents.length + 1));
           eventsSheet['!ref'] = XLSX.utils.encode_range(newRange);
         }
 
@@ -166,7 +174,6 @@ export const exportToExcel = (
         // --- HOJA DE RESUMEN ---
         const summarySheetData = [
           ['Reporte de Alarmas de Conducción'],
-          [], // Fila vacía
           ['Empresa:', selectedCompany || 'N/A'],
           ['Vehículo:', currentReport.vehicle_plate],
           ['Archivo:', currentReport.file_name],
@@ -192,7 +199,8 @@ export const exportToExcel = (
         XLSX.utils.book_append_sheet(workbook, summaryWorksheet, 'Resumen');
 
         // --- HOJA DE EVENTOS FILTRADOS ---
-        const eventsSheetData = filteredEvents.map(event => [
+        const eventsSheetData = filteredEvents.map((event, index) => [
+          index + 1,
           formatTimestamp(event.timestamp),
           event.vehiclePlate,
           alarmNameMapping[event.alarmType.toLowerCase()] || event.alarmType,
@@ -202,7 +210,7 @@ export const exportToExcel = (
         ]);
 
         const eventsWorksheet = XLSX.utils.aoa_to_sheet([
-          ['Fecha y Hora', 'Patente', 'Tipo de Alarma', 'Conductor', 'Empresa', 'Comentarios'],
+          ['#', 'Fecha y Hora', 'Patente', 'Tipo de Alarma', 'Conductor', 'Empresa', 'Comentarios'],
           ...eventsSheetData,
         ]);
         XLSX.utils.book_append_sheet(workbook, eventsWorksheet, 'Eventos Filtrados');
