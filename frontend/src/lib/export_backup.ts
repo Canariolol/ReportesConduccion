@@ -4,10 +4,7 @@ import jsPDF from 'jspdf';
 import { captureChartAsImage, formatTimestamp } from '../components/Dashboard/ExportUtils';
 import { applyEnhancedStyles } from '../components/Dashboard/ExcelStyleUtils';
 
-// URL de la API - configurable para desarrollo y producción
-const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000';
-
-export const exportToExcelBackend = async (
+export const exportToExcel = (
   currentReport: any,
   filteredEvents: any[],
   selectedCompany: string,
@@ -20,221 +17,221 @@ export const exportToExcelBackend = async (
   if (!currentReport) return;
 
   setModalTitle('Exportando a Excel');
-  setModalContent('Generando reporte de Excel con formato profesional desde el servidor...');
+  setModalContent('Generando reporte de Excel con el formato profesional...');
   setModalLoading(true);
   setExportModalOpen(true);
 
-  try {
-    // Preparar los datos para enviar al backend
-    const exportData = {
-      current_report: currentReport,
-      filtered_events: filteredEvents,
-      selected_company: selectedCompany
-    };
-
-    console.log('Enviando datos al backend para exportación Excel:', {
-      reportCount: 1,
-      eventCount: filteredEvents.length,
-      company: selectedCompany,
-      vehicle: currentReport.vehicle_plate
-    });
-
-    // Realizar la petición al backend - CORREGIDO: Usar endpoint v2
-    const response = await fetch(`${API_BASE_URL}/api/v1/export/excel/v2`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(exportData),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || 'Error al generar el archivo Excel');
-    }
-
-    // Obtener el blob del archivo Excel
-    const blob = await response.blob();
+  import('xlsx').then(XLSX => {
+    // --- CARGAR PLANTILLA DE REFERENCIA ---
+    let workbook: XLSX.WorkBook;
     
-    // Generar nombre de archivo
-    const companySuffix = selectedCompany ? `_${selectedCompany.replace(/\s+/g, '_')}` : '';
-    const timestamp = format(new Date(), 'yyyyMMdd_HHmm');
-    const filename = `reporte_conducción_${currentReport.vehicle_plate}${companySuffix}_${timestamp}.xlsx`;
+    // Intentar cargar el archivo de plantilla
+    fetch('/referenciaReporte.xlsx')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('No se pudo cargar la plantilla de referencia');
+        }
+        return response.arrayBuffer();
+      })
+      .then(arrayBuffer => {
+        // Cargar el archivo de plantilla
+        const templateData = new Uint8Array(arrayBuffer);
+        workbook = XLSX.read(templateData, { type: 'array' });
+        
+        // --- MAPEO DE NOMBRES DE ALARMAS ---
+        const alarmNameMapping: Record<string, string> = {
+          'cinturon': 'Cinturón de seguridad',
+          'distraido': 'Conductor distraído',
+          'cruce': 'Cruce de carril',
+          'distancia': 'Distancia de seguridad',
+          'fatiga': 'Fatiga',
+          'frenada': 'Frenada brusca',
+          'stop': 'Infracción de señal de stop',
+          'telefono': 'Teléfono móvil',
+          'boton': 'Botón de Alerta',
+          'video': 'Video Solicitado',
+        };
 
-    // Crear URL para descarga
-    const url = window.URL.createObjectURL(blob);
-    
-    // Crear enlace temporal para descarga
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    
-    // Simular clic para iniciar descarga
-    document.body.appendChild(link);
-    link.click();
-    
-    // Limpiar
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
+        // --- ACTUALIZAR HOJA DE RESUMEN ---
+        const summarySheet = workbook.Sheets['Resumen'];
+        if (summarySheet) {
+          // Función de ayuda para actualizar o crear una celda de forma segura
+          const updateCell = (cellRef: string, value: any, cellType: string = 's') => {
+            // Usamos sheet_add_aoa para asegurar que la celda se cree si no existe
+            // y que el rango de la hoja se actualice correctamente.
+            XLSX.utils.sheet_add_aoa(summarySheet, [[value]], { origin: cellRef });
+            
+            // Forzamos el tipo de celda, ya que sheet_add_aoa puede inferir incorrectamente.
+            if (summarySheet[cellRef]) {
+              summarySheet[cellRef].t = cellType;
+            }
+          };
 
-    setModalLoading(false);
-    setModalTitle('Exportación Completada');
-    setModalContent(`El reporte de Excel se ha generado exitosamente con ${filteredEvents.length} eventos usando el formato profesional del servidor.`);
+          // Actualizar información del reporte
+          updateCell('B2', selectedCompany || 'N/A', 's');
+          updateCell('B3', currentReport.vehicle_plate, 's');
+          updateCell('B4', currentReport.file_name, 's');
+          updateCell('B5', format(new Date(), 'dd/MM/yyyy HH:mm'), 's');
 
-  } catch (error) {
-    console.error('Error al exportar a Excel desde backend:', error);
-    
-    setModalLoading(false);
-    setModalTitle('Error en Exportación');
-    setModalContent(`No se pudo generar el reporte de Excel: ${typeof error === 'object' && error !== null && 'message' in error ? (error as { message?: string }).message : 'Error desconocido'}. Por favor, intente nuevamente.`);
-  }
-};
+          // Actualizar métricas
+          updateCell('A9', 'Total de Alarmas', 's');
+          updateCell('B9', currentReport.summary.totalAlarms, 'n');
+          updateCell('A10', 'Tipos de Alarma', 's');
+          updateCell('B10', Object.keys(currentReport.summary.alarmTypes).length, 'n');
+          updateCell('A11', 'Eventos Filtrados', 's');
+          updateCell('B11', filteredEvents.length, 'n');
 
-// Función de fallback para usar el método antiguo si el backend no está disponible
-export const exportToExcelFallback = (
-  currentReport: any,
-  filteredEvents: any[],
-  selectedCompany: string,
-  getEventCompanyName: (event: any) => string,
-  setModalTitle: (title: string) => void,
-  setModalContent: (content: string) => void,
-  setModalLoading: (loading: boolean) => void,
-  setExportModalOpen: (open: boolean) => void
-) => {
-  setModalTitle('Exportando a Excel (Método Alternativo)');
-  setModalContent('Generando reporte de Excel con el método alternativo...');
-  setModalLoading(true);
-  setExportModalOpen(true);
+          // Actualizar tabla de resumen por alarma
+          const alarmSummaryData = Object.entries(currentReport.summary.alarmTypes).map(([type, count]) => [
+            alarmNameMapping[type.toLowerCase()] || type,
+            count,
+          ]);
 
-  // Importar dinámicamente las librerías necesarias
-  Promise.all([
-    import('xlsx'),
-    import('../components/Dashboard/ExportUtils'),
-    import('../components/Dashboard/ExcelStyleUtils')
-  ]).then(([XLSX, ExportUtils, ExcelStyleUtils]) => {
-    const { formatTimestamp } = ExportUtils;
-    const { applyEnhancedStyles } = ExcelStyleUtils;
-    
-    // Crear nuevo workbook
-    const workbook = XLSX.utils.book_new();
+          // Usar sheet_add_aoa para insertar los datos de forma segura, comenzando en la celda A15
+          XLSX.utils.sheet_add_aoa(summarySheet, alarmSummaryData, { origin: 'A15' });
+        }
 
-    // Mapeo de nombres de alarmas
-    const alarmNameMapping: Record<string, string> = {
-      'cinturon': 'Cinturón de seguridad',
-      'distraido': 'Conductor distraído',
-      'cruce': 'Cruce de carril',
-      'distancia': 'Distancia de seguridad',
-      'fatiga': 'Fatiga',
-      'frenada': 'Frenada brusca',
-      'stop': 'Infracción de señal de stop',
-      'telefono': 'Teléfono móvil',
-      'boton': 'Botón de Alerta',
-      'video': 'Video Solicitado',
-    };
+        // --- ACTUALIZAR HOJA DE EVENTOS FILTRADOS ---
+        const eventsSheet = workbook.Sheets['Eventos Filtrados'];
+        if (eventsSheet) {
+          // Limpiar datos existentes (mantener encabezados en la fila 1)
+          const range = XLSX.utils.decode_range(eventsSheet['!ref'] || 'A1');
+          for (let row = 1; row <= range.e.r; row++) { // Empezar a limpiar desde la fila 2 (índice 1)
+            for (let col = range.s.c; col <= range.e.c; col++) {
+              const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
+              if (eventsSheet[cellAddress]) {
+                delete eventsSheet[cellAddress];
+              }
+            }
+          }
 
-    // Hoja de resumen
-    const summarySheetData = [
-      ['Reporte de Alarmas de Conducción'],
-      ['Empresa:', selectedCompany || 'N/A'],
-      ['Vehículo:', currentReport.vehicle_plate],
-      ['Archivo:', currentReport.file_name],
-      ['Fecha de Exportación:', format(new Date(), 'dd/MM/yyyy HH:mm')],
-      [],
-      ['Resumen de Métricas'],
-      ['Métrica', 'Valor'],
-      ['Total de Alarmas', currentReport.summary.totalAlarms],
-      ['Tipos de Alarma', Object.keys(currentReport.summary.alarmTypes).length],
-      ['Eventos Filtrados', filteredEvents.length],
-      [],
-      ['Resumen por Alarma'],
-      ['Tipo de Alarma', 'Valor'],
-    ];
+          // Agregar nuevos datos
+          filteredEvents.forEach((event, index) => {
+            const rowIndex = index + 1; // Empezar a escribir en la fila 2 (índice 1)
+            
+            // Enumeración
+            const numCell = XLSX.utils.encode_cell({ r: rowIndex, c: 0 });
+            eventsSheet[numCell] = { t: 'n', v: index + 1 };
 
-    const alarmSummaryData = Object.entries(currentReport.summary.alarmTypes).map(([type, count]) => [
-      alarmNameMapping[type.toLowerCase()] || type,
-      count,
-    ]);
+            // Fecha y Hora
+            const dateCell = XLSX.utils.encode_cell({ r: rowIndex, c: 1 });
+            eventsSheet[dateCell] = { t: 's', v: formatTimestamp(event.timestamp) };
+            
+            // Patente
+            const plateCell = XLSX.utils.encode_cell({ r: rowIndex, c: 2 });
+            eventsSheet[plateCell] = { t: 's', v: event.vehiclePlate };
+            
+            // Tipo de Alarma
+            const typeCell = XLSX.utils.encode_cell({ r: rowIndex, c: 3 });
+            eventsSheet[typeCell] = { t: 's', v: alarmNameMapping[event.alarmType.toLowerCase()] || event.alarmType };
+            
+            // Conductor
+            const driverCell = XLSX.utils.encode_cell({ r: rowIndex, c: 4 });
+            eventsSheet[driverCell] = { t: 's', v: event.driver || 'Sin conductor' };
+            
+            // Empresa
+            const companyCell = XLSX.utils.encode_cell({ r: rowIndex, c: 5 });
+            eventsSheet[companyCell] = { t: 's', v: getEventCompanyName(event) };
+            
+            // Comentarios
+            const commentsCell = XLSX.utils.encode_cell({ r: rowIndex, c: 6 });
+            eventsSheet[commentsCell] = { t: 's', v: event.comments || 'Sin comentarios' };
+          });
 
-    const finalSummaryData = summarySheetData.concat(alarmSummaryData);
-    const summaryWorksheet = XLSX.utils.aoa_to_sheet(finalSummaryData);
-    XLSX.utils.book_append_sheet(workbook, summaryWorksheet, 'Resumen');
+          // Actualizar el rango de la hoja a 7 columnas (A-G)
+          const newRange = XLSX.utils.decode_range('A1:G' + (filteredEvents.length + 1));
+          eventsSheet['!ref'] = XLSX.utils.encode_range(newRange);
+        }
 
-    // Hoja de eventos filtrados
-    const eventsSheetData = filteredEvents.map((event, index) => [
-      index + 1,
-      formatTimestamp(event.timestamp),
-      event.vehiclePlate,
-      alarmNameMapping[event.alarmType.toLowerCase()] || event.alarmType,
-      event.driver || 'Sin conductor',
-      getEventCompanyName(event),
-      event.comments || 'Sin comentarios',
-    ]);
+        // --- GUARDAR ARCHIVO ---
+        const companySuffix = selectedCompany ? `_${selectedCompany.replace(/\s+/g, '_')}` : '';
+        XLSX.writeFile(workbook, `reporte_conducción_${currentReport.vehicle_plate}${companySuffix}_${format(new Date(), 'yyyyMMdd_HHmm')}.xlsx`);
 
-    const eventsWorksheet = XLSX.utils.aoa_to_sheet([
-      ['#', 'Fecha y Hora', 'Patente', 'Tipo de Alarma', 'Conductor', 'Empresa', 'Comentarios'],
-      ...eventsSheetData,
-    ]);
-    XLSX.utils.book_append_sheet(workbook, eventsWorksheet, 'Eventos Filtrados');
+        setModalLoading(false);
+        setModalTitle('Exportación Completada');
+        setModalContent(`El reporte de Excel se ha generado exitosamente con ${filteredEvents.length} eventos usando la plantilla de formato profesional.`);
+      })
+      .catch(error => {
+        console.error('Error al cargar plantilla, usando método alternativo:', error);
+        
+        // Si falla la carga de la plantilla, usar el método original
+        const workbook = XLSX.utils.book_new();
 
-    // Aplicar estilos
-    const styledWorkbook = applyEnhancedStyles(workbook);
+        // --- MAPEO DE NOMBRES DE ALARMAS ---
+        const alarmNameMapping: Record<string, string> = {
+          'cinturon': 'Cinturón de seguridad',
+          'distraido': 'Conductor distraído',
+          'cruce': 'Cruce de carril',
+          'distancia': 'Distancia de seguridad',
+          'fatiga': 'Fatiga',
+          'frenada': 'Frenada brusca',
+          'stop': 'Infracción de señal de stop',
+          'telefono': 'Teléfono móvil',
+          'boton': 'Botón de Alerta',
+          'video': 'Video Solicitado',
+        };
 
-    // Guardar archivo
-    const companySuffix = selectedCompany ? `_${selectedCompany.replace(/\s+/g, '_')}` : '';
-    XLSX.writeFile(styledWorkbook, `reporte_conducción_${currentReport.vehicle_plate}${companySuffix}_${format(new Date(), 'yyyyMMdd_HHmm')}.xlsx`);
+        // --- HOJA DE RESUMEN ---
+        const summarySheetData = [
+          ['Reporte de Alarmas de Conducción'],
+          ['Empresa:', selectedCompany || 'N/A'],
+          ['Vehículo:', currentReport.vehicle_plate],
+          ['Archivo:', currentReport.file_name],
+          ['Fecha de Exportación:', format(new Date(), 'dd/MM/yyyy HH:mm')],
+          [], // Fila vacía
+          ['Resumen de Métricas'],
+          ['Métrica', 'Valor'],
+          ['Total de Alarmas', currentReport.summary.totalAlarms],
+          ['Tipos de Alarma', Object.keys(currentReport.summary.alarmTypes).length],
+          ['Eventos Filtrados', filteredEvents.length],
+          [], // Fila vacía
+          ['Resumen por Alarma'],
+          ['Tipo de Alarma', 'Valor'],
+        ];
 
-    setModalLoading(false);
-    setModalTitle('Exportación Completada');
-    setModalContent(`El reporte de Excel se ha generado exitosamente con ${filteredEvents.length} eventos (método alternativo).`);
+        const alarmSummaryData = Object.entries(currentReport.summary.alarmTypes).map(([type, count]) => [
+          alarmNameMapping[type.toLowerCase()] || type,
+          count,
+        ]);
 
+        const finalSummaryData = summarySheetData.concat(alarmSummaryData);
+        const summaryWorksheet = XLSX.utils.aoa_to_sheet(finalSummaryData);
+        XLSX.utils.book_append_sheet(workbook, summaryWorksheet, 'Resumen');
+
+        // --- HOJA DE EVENTOS FILTRADOS ---
+        const eventsSheetData = filteredEvents.map((event, index) => [
+          index + 1,
+          formatTimestamp(event.timestamp),
+          event.vehiclePlate,
+          alarmNameMapping[event.alarmType.toLowerCase()] || event.alarmType,
+          event.driver || 'Sin conductor',
+          getEventCompanyName(event),
+          event.comments || 'Sin comentarios',
+        ]);
+
+        const eventsWorksheet = XLSX.utils.aoa_to_sheet([
+          ['#', 'Fecha y Hora', 'Patente', 'Tipo de Alarma', 'Conductor', 'Empresa', 'Comentarios'],
+          ...eventsSheetData,
+        ]);
+        XLSX.utils.book_append_sheet(workbook, eventsWorksheet, 'Eventos Filtrados');
+
+        // --- APLICAR ESTILOS ---
+        const styledWorkbook = applyEnhancedStyles(workbook);
+
+        // --- GUARDAR ARCHIVO ---
+        const companySuffix = selectedCompany ? `_${selectedCompany.replace(/\s+/g, '_')}` : '';
+        XLSX.writeFile(styledWorkbook, `reporte_conducción_${currentReport.vehicle_plate}${companySuffix}_${format(new Date(), 'yyyyMMdd_HHmm')}.xlsx`);
+
+        setModalLoading(false);
+        setModalTitle('Exportación Completada');
+        setModalContent(`El reporte de Excel se ha generado exitosamente con ${filteredEvents.length} eventos (método alternativo).`);
+      });
   }).catch(error => {
-    console.error('Error en método alternativo de exportación:', error);
+    console.error('Error al exportar a Excel:', error);
     setModalLoading(false);
     setModalTitle('Error en Exportación');
-    setModalContent('No se pudo generar el reporte de Excel con ningún método. Por favor, intente nuevamente.');
+    setModalContent('No se pudo generar el reporte de Excel. Por favor, intente nuevamente.');
   });
-};
-
-// Función principal que intenta el método del backend primero y fallback al método antiguo
-export const exportToExcel = async (
-  currentReport: any,
-  filteredEvents: any[],
-  selectedCompany: string,
-  getEventCompanyName: (event: any) => string,
-  setModalTitle: (title: string) => void,
-  setModalContent: (content: string) => void,
-  setModalLoading: (loading: boolean) => void,
-  setExportModalOpen: (open: boolean) => void
-) => {
-  if (!currentReport) return;
-
-  // Primero intentar con el método del backend
-  try {
-    await exportToExcelBackend(
-      currentReport,
-      filteredEvents,
-      selectedCompany,
-      getEventCompanyName,
-      setModalTitle,
-      setModalContent,
-      setModalLoading,
-      setExportModalOpen
-    );
-  } catch (error) {
-    console.warn('Error con método del backend, usando fallback:', error);
-    
-    // Si falla el método del backend, usar el método alternativo
-    exportToExcelFallback(
-      currentReport,
-      filteredEvents,
-      selectedCompany,
-      getEventCompanyName,
-      setModalTitle,
-      setModalContent,
-      setModalLoading,
-      setExportModalOpen
-    );
-  }
 };
 
 export const exportToPDF = async (

@@ -1,0 +1,32 @@
+{
+  "current_report": {
+    "vehicle_plate": "TEST123",
+    "file_name": "archivo_test.xlsx",
+    "summary": {
+      "totalAlarms": 25,
+      "alarmTypes": {
+        "cinturon": 10,
+        "distraido": 8,
+        "frenada": 5,
+        "telefono": 2
+      }
+    }
+  },
+  "filtered_events": [
+    {
+      "timestamp": "2025-09-27T18:30:00Z",
+      "vehiclePlate": "TEST123",
+      "alarmType": "cinturon",
+      "driver": "Juan Pérez",
+      "comments": "Conductor sin cinturón"
+    },
+    {
+      "timestamp": "2025-09-27T19:15:00Z",
+      "vehiclePlate": "TEST123",
+      "alarmType": "distraido",
+      "driver": "María García",
+      "comments": "Conductor usando celular"
+    }
+  ],
+  "selected_company": "Empresa de Prueba"
+}

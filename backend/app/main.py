@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 
 from .core.config import settings  # Corregir importación
 from .api import excel
+from .api import excel_export_v2
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -36,6 +37,7 @@ app.add_middleware(
 
 # Include API routes
 app.include_router(excel.router, prefix=settings.API_V1_STR)
+app.include_router(excel_export_v2.router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 async def root():
