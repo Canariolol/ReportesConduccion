@@ -1,1 +1,1 @@
-﻿["https://west-reportes-conduccion.web.app", "http://localhost:3000", "http://localhost:5173"]
+﻿["https://west-reportes-conduccion.web.app", "http://localhost:3000", "http://localhost:5173", "https://reportes-west.ninfasolutions.com"]
