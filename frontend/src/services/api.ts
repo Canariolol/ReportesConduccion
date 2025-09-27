@@ -1,5 +1,19 @@
 import axios from 'axios'
 
+// Agrega la definición de tipos para ImportMetaEnv
+interface ImportMetaEnv {
+  readonly DEV: boolean
+  readonly VITE_API_URL?: string
+  // agrega otras variables de entorno aquí si es necesario
+}
+
+// Augment the global ImportMeta type so TypeScript recognizes import.meta.env
+declare global {
+  interface ImportMeta {
+    readonly env: ImportMetaEnv
+  }
+}
+
 // Configuración de API según el entorno
 const getApiConfig = () => {
   // En desarrollo, usar el proxy de Vite
@@ -11,7 +25,7 @@ const getApiConfig = () => {
   }
   
   // En producción, usar la URL del backend desplegado
-  const productionApiUrl = import.meta.env.VITE_API_URL || 'https://reportes-conduccion-backend-51038157662.us-central1.run.app/api'
+  const productionApiUrl = import.meta.env.VITE_API_URL || 'https://reportes-conduccion-backend-v2-51038157662.us-central1.run.app/api'
   
   const config = {
     baseURL: productionApiUrl,

@@ -237,6 +237,7 @@ frontend/
 - [ ] Crear panel de administración de usuarios
 - [ ] Configurar testing automatizado
 - [ ] Implementar CI/CD con GitHub Actions
+- [ ] **(PLANIFICADO)** Refactorizar exportación de Excel para preservar estilos.
 
 ### Corto Plazo (1-2 meses)
 - [ ] Sistema de usuarios multiempresa
@@ -249,6 +250,39 @@ frontend/
 - [ ] Integración con sistemas de telemetría vehicular
 - [ ] Dashboard en tiempo real
 - [ ] Expansión a múltiples países
+
+---
+
+## Planes Detallados
+
+### **PLANIFICADO: Refactorizar Exportación de Excel para Preservar Estilos**
+
+#### Problema Actual
+La librería `xlsx` utilizada en el frontend no puede leer los estilos (colores, fuentes, bordes) del archivo de plantilla `referenciaReporte.xlsx`. Como resultado, el archivo Excel exportado contiene los datos correctos pero pierde todo el formato visual.
+
+#### Solución Propuesta: Migración al Backend
+Para solucionar esto, se moverá la lógica de generación de Excel al backend de Python, que utilizará la librería `openpyxl` para preservar los estilos.
+
+#### Pasos de Implementación
+
+**1. Cambios en el Backend (Python)**
+-   **Añadir Dependencia:** Incorporar `openpyxl` al archivo `requirements.txt`.
+-   **Nuevo Endpoint:** Crear una nueva ruta en la API: `POST /api/export/excel`.
+-   **Lógica del Endpoint:**
+    -   Recibirá los datos del reporte en formato JSON desde el frontend.
+    -   Utilizará `openpyxl` para abrir la plantilla `referenciaReporte.xlsx`.
+    -   Poblará la plantilla con los datos recibidos. `openpyxl` conservará todos los estilos existentes en la plantilla.
+    -   Enviará el archivo `.xlsx` finalizado como respuesta a la petición del frontend.
+
+**2. Cambios en el Frontend (React)**
+-   **Refactorizar `exportToExcel`:** La función ubicada en `frontend/src/lib/export.ts` será modificada.
+-   **Llamada a la API:** En lugar de procesar el archivo en el navegador, la función enviará una petición `POST` al nuevo endpoint del backend con los datos del reporte.
+-   **Gestión de Descarga:** La función recibirá el archivo generado por el backend y lo ofrecerá al usuario para su descarga.
+
+#### Beneficios de este Enfoque
+-   **Soporte Completo de Estilos:** Se conservará el 100% del formato del archivo de plantilla.
+-   **Mantenimiento Sencillo:** Para cambiar los estilos en el futuro, solo será necesario editar el archivo `referenciaReporte.xlsx`, sin modificar el código.
+-   **Robustez:** Utiliza herramientas estándar y potentes (`openpyxl`) para la tarea.
 
 ---
 
