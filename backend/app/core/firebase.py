@@ -3,7 +3,6 @@ from firebase_admin import credentials, firestore, storage
 import os
 import json
 import logging
-import re
 from .config import settings
 
 # Configurar logging
@@ -12,130 +11,85 @@ logger = logging.getLogger(__name__)
 
 class FirebaseManager:
     def __init__(self):
-        if not firebase_admin._apps:
-            logger.info("🚀 Inicializando Firebase Manager...")
-            
-            is_cloud_run = os.getenv('K_SERVICE') is not None
-            logger.info(f"📍 Entorno: {'Cloud Run' if is_cloud_run else 'Local'}")
-            
-            if is_cloud_run:
-                logger.info("🔐 Intentando leer secret de Cloud Run...")
-                firebase_secret_path = '/secrets/firebase/key'
-                cors_secret_path = '/secrets/cors/origins'
-                
-                try:
-                    with open(firebase_secret_path, 'r') as f:
-                        secret_content = f.read()
-                    logger.info(f"✅ Secret de Firebase leído exitosamente desde {firebase_secret_path}")
+        if firebase_admin._apps:
+            self.db = firestore.client()
+            self.storage = storage.bucket()
+            return
 
-                    # Procesar saltos de línea en la clave privada del secret
-                    private_key = re.sub(r'\\n', '\n', secret_content)
-                    logger.info("🔄 Procesados saltos de línea en la clave privada del secret")
+        logger.info("🚀 Inicializando Firebase Manager...")
+        is_cloud_run = os.getenv('K_SERVICE') is not None
+        logger.info(f"📍 Entorno: {'Cloud Run' if is_cloud_run else 'Local'}")
 
-                    with open(cors_secret_path, 'r') as f:
-                        cors_content = f.read()
-                    logger.info(f"✅ Configuración de CORS leída exitosamente desde {cors_secret_path}")
-                    
-                    cors_origins = json.loads(cors_content)
-                    settings.BACKEND_CORS_ORIGINS = cors_origins
-                    logger.info(f"📋 CORS configurado con: {cors_origins}")
-                    
-                    cred = credentials.Certificate({
-                        "type": "service_account",
-                        "project_id": settings.FIREBASE_PROJECT_ID,
-                        "private_key_id": settings.FIREBASE_PRIVATE_KEY_ID,
-                        "private_key": private_key,
-                        "client_email": settings.FIREBASE_CLIENT_EMAIL,
-                        "client_id": settings.FIREBASE_CLIENT_ID,
-                        "auth_uri": settings.FIREBASE_AUTH_URI,
-                        "token_uri": settings.FIREBASE_TOKEN_URI,
-                        "auth_provider_x509_cert_url": settings.FIREBASE_AUTH_PROVIDER_X509_CERT_URL,
-                        "client_x509_cert_url": settings.FIREBASE_CLIENT_X509_CERT_URL
-                    })
-                    
-                except Exception as e:
-                    logger.error(f"❌ Error al leer los secretos: {str(e)}")
-                    logger.info("🔄 Usando variables de entorno como fallback...")
-                    self._use_environment_variables()
-                    return
-            else:
-                logger.info(" Usando variables de entorno para desarrollo local...")
-                self._use_environment_variables()
-                return
-            
-            try:
-                logger.info("🔧 Inicializando Firebase app...")
-                firebase_admin.initialize_app(cred, {
-                    'storageBucket': f'{settings.FIREBASE_PROJECT_ID}.appspot.com'
-                })
-                logger.info("✅ Firebase app inicializada exitosamente")
-            except Exception as e:
-                logger.error(f"❌ Error al inicializar Firebase app: {str(e)}")
-                raise
-        
         try:
+            if is_cloud_run:
+                self._init_from_secret_manager_api()
+            else:
+                self._init_from_local_service_account_file()
+
             self.db = firestore.client()
             self.storage = storage.bucket()
             logger.info("🎉 Firebase Manager inicializado completamente")
         except Exception as e:
-            logger.error(f"❌ Error al inicializar Firestore y Storage: {str(e)}")
+            logger.critical(f"💥 Error fatal durante la inicialización de Firebase: {e}")
+            self.db = None
+            self.storage = None
             raise
-    
-    def _use_environment_variables(self):
-        """Usar variables de entorno como fallback"""
-        logger.info("� Configurando credenciales desde variables de entorno...")
-        
-        private_key_env = settings.FIREBASE_PRIVATE_KEY
-        logger.info(f"� Longitud de la clave privada: {len(private_key_env)} caracteres")
-        
-        if private_key_env.startswith('"') and private_key_env.endswith('"'):
-            private_key_env = private_key_env[1:-1]
-            logger.info("🔄 Quitadas comillas de la clave privada")
-        
-        private_key = re.sub(r'\\n', '\n', private_key_env)
-        logger.info("🔄 Procesados saltos de línea en la clave privada")
-        
-        cred_dict = {
-            "type": "service_account",
-            "project_id": settings.FIREBASE_PROJECT_ID,
-            "private_key_id": settings.FIREBASE_PRIVATE_KEY_ID,
-            "private_key": private_key,
-            "client_email": settings.FIREBASE_CLIENT_EMAIL,
-            "client_id": settings.FIREBASE_CLIENT_ID,
-            "auth_uri": settings.FIREBASE_AUTH_URI,
-            "token_uri": settings.FIREBASE_TOKEN_URI,
-            "auth_provider_x509_cert_url": settings.FIREBASE_AUTH_PROVIDER_X509_CERT_URL,
-            "client_x509_cert_url": settings.FIREBASE_CLIENT_X509_CERT_URL
-        }
 
-        cred_dict = {k: v for k, v in cred_dict.items() if v}
-        
-        cred = credentials.Certificate(cred_dict)
-        
+    def _init_from_secret_manager_api(self):
+        """Inicializa la configuración leyendo directamente desde la API de Secret Manager."""
+        logger.info("🔐 Usando la API de Secret Manager para leer los secretos...")
         try:
+            from google.cloud import secretmanager
+            client = secretmanager.SecretManagerServiceClient()
+            project_id = "west-reportes-conduccion"
+
+            def get_secret(secret_name):
+                version_path = client.secret_version_path(project_id, secret_name, "latest")
+                response = client.access_secret_version(request={"name": version_path})
+                return response.payload.data.decode("UTF-8")
+
+            # 1. Leer el JSON completo de la cuenta de servicio desde un solo secreto
+            service_account_json_string = get_secret("firebase-service-account")
+            cred_dict = json.loads(service_account_json_string)
+            
+            # 2. Inicializar Firebase directamente con el diccionario de credenciales
+            cred = credentials.Certificate(cred_dict)
+            firebase_admin.initialize_app(cred, {
+                'storageBucket': f'{cred_dict["project_id"]}.appspot.com'
+            })
+            logger.info("✅ Firebase app inicializada con el JSON de la cuenta de servicio completa.")
+
+            # 3. Leer y configurar secreto de CORS
+            cors_content = get_secret("cors-origins")
+            cors_origins = json.loads(cors_content)
+            settings.BACKEND_CORS_ORIGINS = cors_origins
+            logger.info(f"📋 CORS configurado con: {cors_origins}")
+
+        except Exception as e:
+            logger.error(f"❌ Falló la inicialización usando la API de Secret Manager: {e}")
+            raise
+
+    def _init_from_local_service_account_file(self):
+        """Usa el archivo serviceAccount.json para el desarrollo local."""
+        logger.info("🔧 Usando el archivo serviceAccount.json para desarrollo local...")
+        try:
+            cred = credentials.Certificate("serviceAccount.json")
             firebase_admin.initialize_app(cred, {
                 'storageBucket': f'{settings.FIREBASE_PROJECT_ID}.appspot.com'
             })
-            logger.info("✅ Firebase app inicializada con variables de entorno")
-            
-            # Inicializar db y storage después de la inicialización
-            self.db = firestore.client()
-            self.storage = storage.bucket()
-            logger.info("✅ Firestore y Storage inicializados con variables de entorno")
+            logger.info("✅ Firebase app inicializada con el archivo serviceAccount.json local.")
         except Exception as e:
-            logger.error(f"❌ Error al inicializar Firebase con variables de entorno: {str(e)}")
+            logger.error(f"❌ Falló la inicialización local. Asegúrate de tener un archivo serviceAccount.json válido en la raíz de /backend. Error: {e}")
             raise
-    
+
     def get_db(self):
         return self.db
     
     def get_storage(self):
         return self.storage
 
-# Global Firebase instance
+# Instancia global
 try:
     firebase_manager = FirebaseManager()
-    logger.info("� Firebase Manager global creado exitosamente")
-except Exception as e:
-    logger.error(f"💥 Error crítico al crear Firebase Manager: {str(e)}")
-    raise
+except Exception:
+    firebase_manager = None # La inicialización ya registra el error crítico
