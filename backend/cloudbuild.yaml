@@ -1,0 +1,33 @@
+steps:
+# 1. Build the container image
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', 'gcr.io/$PROJECT_ID/reportes-conduccion-backend:latest', '.']
+
+# 2. Push the container image to Google Container Registry
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push', 'gcr.io/$PROJECT_ID/reportes-conduccion-backend:latest']
+
+# 3. Deploy to Cloud Run with secrets
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: gcloud
+  args:
+  - 'run'
+  - 'deploy'
+  - 'reportes-conduccion-backend'
+  - '--image'
+  - 'gcr.io/$PROJECT_ID/reportes-conduccion-backend:latest'
+  - '--region'
+  - 'us-central1'
+  - '--platform'
+  - 'managed'
+  - '--port'
+  - '8080'
+  - '--allow-unauthenticated'
+  - '--set-env-vars'
+  - 'DEBUG=false,ENVIRONMENT=production'
+  - '--set-secrets'
+  - '/secrets/firebase/key=firebase-private-key:latest'
+
+# This specifies the image to push after the build is complete.
+images:
+- 'gcr.io/$PROJECT_ID/reportes-conduccion-backend:latest'
