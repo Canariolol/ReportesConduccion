@@ -73,9 +73,13 @@ class FirebaseManager:
         """Usa el archivo serviceAccount.json para el desarrollo local."""
         logger.info("🔧 Usando el archivo serviceAccount.json para desarrollo local...")
         try:
+            import json
+            with open("serviceAccount.json", "r") as f:
+                service_account = json.load(f)
+            
             cred = credentials.Certificate("serviceAccount.json")
             firebase_admin.initialize_app(cred, {
-                'storageBucket': f'{settings.FIREBASE_PROJECT_ID}.appspot.com'
+                'storageBucket': f'{service_account["project_id"]}.appspot.com'
             })
             logger.info("✅ Firebase app inicializada con el archivo serviceAccount.json local.")
         except Exception as e:
