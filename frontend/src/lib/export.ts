@@ -484,8 +484,8 @@ export const exportToPDF = async (
         currentY += chartHeight + 20;  // Aumentado espacio después del gráfico
       }
       
-      // Verificar si necesitamos nueva página
-      if (currentY + 140 > pageHeight - 30) {
+      // Verificar si necesitamos nueva página para los próximos dos gráficos
+      if (currentY + 320 > pageHeight - 30) {
         pdf.addPage();
         currentY = 35;
       }
@@ -508,26 +508,20 @@ export const exportToPDF = async (
         currentY += 12;
         
         // Calcular dimensiones manteniendo proporción - AGRANDADO
-        const chartWidth = 180;  // Aumentado de 160 a 180 para mejor legibilidad
+        const chartWidth = 200;  // Reducido de 200 a 190 para mejor centrado
         const aspectRatio = areaChartResult.height / areaChartResult.width;
         const chartHeight = chartWidth * aspectRatio;
         
         console.log(`Dimensiones gráfico área: ${chartWidth}x${chartHeight}`);
         console.log(`Datos de imagen: ${areaChartResult.imageData.substring(0, 50)}...`);
         
-        // Centrar horizontalmente el gráfico de área
-        const areaCenterX = (pageWidth - chartWidth) / 2;
+        // CORREGIDO: Centrar horizontalmente el gráfico de área en relación a su título
+        const areaCenterX = ((pageWidth - chartWidth) / 2)-2;
         pdf.addImage(areaChartResult.imageData, 'PNG', areaCenterX, currentY, chartWidth, chartHeight);
-        currentY += chartHeight + 15;
+        currentY += chartHeight + 30;  // CORREGIDO: Aumentar espacio entre gráficos
       }
       
-      // Verificar si necesitamos nueva página
-      if (currentY + 140 > pageHeight - 30) {
-        pdf.addPage();
-        currentY = 35;
-      }
-      
-      // Gráfico de líneas
+      // CORREGIDO: Gráfico de líneas (Alarmas por Hora) justo debajo del gráfico de área
       if (lineChartResult.imageData) {
         console.log('Agregando gráfico de líneas al PDF...');
         // Subtítulo destacado con fondo y borde
@@ -545,15 +539,15 @@ export const exportToPDF = async (
         currentY += 12;
         
         // Calcular dimensiones manteniendo proporción - AGRANDADO
-        const chartWidth = 180;  // Aumentado de 160 a 180 para mejor legibilidad
+        const chartWidth = 205;  // Reducido de 200 a 190 para mejor centrado
         const aspectRatio = lineChartResult.height / lineChartResult.width;
         const chartHeight = chartWidth * aspectRatio;
         
         console.log(`Dimensiones gráfico líneas: ${chartWidth}x${chartHeight}`);
         console.log(`Datos de imagen: ${lineChartResult.imageData.substring(0, 50)}...`);
         
-        // Centrar horizontalmente el gráfico de líneas
-        const lineCenterX = (pageWidth - chartWidth) / 2;
+        // CORREGIDO: Centrar horizontalmente el gráfico de líneas en relación a su título
+        const lineCenterX = ((pageWidth - chartWidth) / 2)-5; // Ajuste fino para mejor centrado
         pdf.addImage(lineChartResult.imageData, 'PNG', lineCenterX, currentY, chartWidth, chartHeight);
         currentY += chartHeight + 15;
       }
