@@ -643,7 +643,28 @@ export const exportToPDF = async (
       
       console.log(`Tabla completada. Última posición Y: ${currentY}`);
       
-      return currentY;
+      // CORREGIDO: Agregar mensaje de "Mostrando x de y eventos" al final de la tabla
+      // Obtener el total de eventos del reporte original
+      const totalEventsInReport = currentReport.summary.totalAlarms || 0;
+      const filteredEventsCount = filteredEvents.length;
+      
+      // Agregar espacio antes del mensaje
+      currentY += 5;
+      
+      /* Verificar si necesitamos nueva página para el mensaje
+      if (currentY + 10 > pageHeight - 30) {
+        pdf.addPage();
+        currentY = 35;
+      }*/
+      
+      // Agregar el mensaje en la posición actual
+      pdf.setFontSize(8);
+      pdf.setTextColor(90);
+      pdf.text(`Mostrando ${filteredEventsCount} de ${totalEventsInReport} eventos`, 15, currentY);
+      
+      console.log(`Mensaje agregado: "Mostrando ${filteredEventsCount} de ${totalEventsInReport} eventos"`);
+      
+      return currentY + 10; // Devolver la posición después del mensaje
     };
     
     // Generar el PDF
