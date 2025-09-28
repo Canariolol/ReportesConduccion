@@ -1,23 +1,27 @@
 import axios from 'axios'
 
-// Agrega la definición de tipos para ImportMetaEnv
-interface ImportMetaEnv {
+// Tipos para las variables de entorno personalizadas
+interface CustomImportMetaEnv {
   readonly DEV: boolean
   readonly VITE_API_URL?: string
-  // agrega otras variables de entorno aquí si es necesario
+  readonly VITE_FIREBASE_API_KEY?: string
+  readonly VITE_FIREBASE_AUTH_DOMAIN?: string
+  readonly VITE_FIREBASE_PROJECT_ID?: string
+  readonly VITE_FIREBASE_STORAGE_BUCKET?: string
+  readonly VITE_FIREBASE_MESSAGING_SENDER_ID?: string
+  readonly VITE_FIREBASE_APP_ID?: string
 }
 
-// Augment the global ImportMeta type so TypeScript recognizes import.meta.env
+// Extender el tipo ImportMetaEnv existente
 declare global {
-  interface ImportMeta {
-    readonly env: ImportMetaEnv
-  }
+  interface ImportMetaEnv extends CustomImportMetaEnv {}
 }
 
 // Configuración de API según el entorno
 const getApiConfig = () => {
-  // En desarrollo, usar el proxy de Vite
+  // En desarrollo, usar el proxy de Vite para evitar problemas de CORS
   if (import.meta.env.DEV) {
+    console.log('🔧 Usando configuración de desarrollo (proxy Vite)')
     return {
       baseURL: '/api',
       timeout: 30000,
@@ -25,13 +29,27 @@ const getApiConfig = () => {
   }
   
   // En producción, usar la URL del backend desplegado
-  const productionApiUrl = import.meta.env.VITE_API_URL || 'https://reportes-conduccion-backend-v2-51038157662.us-central1.run.app/api'
+  // La variable VITE_API_URL debe estar configurada en .env.production
+  const productionApiUrl = import.meta.env.VITE_API_URL
+  
+  if (!productionApiUrl) {
+    console.error('❌ Error: VITE_API_URL no está configurada para producción')
+    // URL de respaldo por si acaso
+    const fallbackUrl = 'https://reportes-conduccion-backend-v2-51038157662.us-central1.run.app/api'
+    console.log('🔄 Usando URL de respaldo:', fallbackUrl)
+    
+    return {
+      baseURL: fallbackUrl,
+      timeout: 30000,
+    }
+  }
+  
+  console.log('🚀 Usando configuración de producción:', productionApiUrl)
   
   const config = {
     baseURL: productionApiUrl,
     timeout: 30000,
   }
-  console.log('API Config:', config) // Log para depuración
   return config
 }
 

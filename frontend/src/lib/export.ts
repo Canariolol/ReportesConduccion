@@ -40,7 +40,7 @@ export const exportToExcelBackend = async (
     });
 
     // Realizar la petición al backend - CORREGIDO: Usar endpoint v2
-    const response = await fetch(`${API_BASE_URL}/api/v1/export/excel/v2`, {
+    const response = await fetch(`${API_BASE_URL}/v1/export/excel/v2`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
