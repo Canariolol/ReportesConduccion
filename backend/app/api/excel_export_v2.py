@@ -2,6 +2,8 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from typing import Dict, Any
 import json
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from ..services.excel_export_service_v2 import excel_export_service_v2
 
@@ -40,11 +42,11 @@ async def export_report_to_excel_v2(data: Dict[str, Any]):
         excel_content = excel_export_service_v2.export_report_to_excel(data)
         
         # Generar nombre de archivo
-        from datetime import datetime
         current_report = data.get('current_report', {})
         selected_company = data.get('selected_company', '')
         vehicle_plate = current_report.get('vehicle_plate', 'reporte')
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M')
+        santiago_now = datetime.now(ZoneInfo('America/Santiago'))
+        timestamp = santiago_now.strftime('%Y%m%d_%H%M')
         
         company_suffix = f"_{selected_company.replace(' ', '_')}" if selected_company else ""
         filename = f"reporte_conducción_{vehicle_plate}{company_suffix}_{timestamp}.xlsx"

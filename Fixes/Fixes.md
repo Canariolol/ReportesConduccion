@@ -7,6 +7,7 @@
 
 ## Backend
 - Normalizada la fecha/hora del resumen del Excel exportado a la zona horaria America/Santiago para reflejar correctamente la hora local del reporte.
+- Ajustado el timestamp del nombre de archivo Excel generado via API para usar la zona America/Santiago.
 
 # 24-09 Todos los fixes OK
 
