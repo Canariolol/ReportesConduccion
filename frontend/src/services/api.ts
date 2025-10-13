@@ -23,7 +23,7 @@ const getApiConfig = () => {
   if (import.meta.env.DEV) {
     console.log('🔧 Usando configuración de desarrollo (proxy Vite)')
     return {
-      baseURL: '/api',
+      baseURL: '/api/',
       timeout: 30000,
     }
   }

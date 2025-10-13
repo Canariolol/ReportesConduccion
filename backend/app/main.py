@@ -85,8 +85,8 @@ async def general_exception_handler(request, exc):
     )
 
 if __name__ == "__main__":
-    # Cloud Run usa PORT=8080, pero para desarrollo local usamos 8000
-    port = int(os.getenv("PORT", 8000))
+    # Cloud Run usa PORT=8080, pero para desarrollo local usamos 8080
+    port = int(os.getenv("PORT", 8080))
     uvicorn.run(
         "main:app",
         host="0.0.0.0",

@@ -1,3 +1,13 @@
+# 2025-10-13 Mejoras
+
+## Frontend
+- Ajustado el pie chart para usar un naranja mas claro y ocultar etiquetas cuando el porcentaje es menor al umbral definido, evitando colores similares y valores superpuestos.
+- Truncado dinamicamente los textos del reporte PDF (tipo de alarma, patente, conductor y comentarios) segun el ancho disponible para cada columna, evitando solapamientos en tablas largas.
+- Alineado el contenido de la columna Tipo del PDF con el encabezado correspondiente.
+
+## Backend
+- Normalizada la fecha/hora del resumen del Excel exportado a la zona horaria America/Santiago para reflejar correctamente la hora local del reporte.
+
 # 24-09 Todos los fixes OK
 
 ## Frontend
@@ -21,3 +31,4 @@
 
 ## Backend
 - Refinar comportamiendo de los endpoints y como se están guardando los reportes (por ahora se guardan los reportes de los archivos subidos y de los archivos generados, solo deben guardarse los subidos)
+

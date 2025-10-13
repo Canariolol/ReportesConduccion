@@ -3,6 +3,7 @@ import json
 import tempfile
 from datetime import datetime
 from typing import Dict, List, Any, Optional
+from zoneinfo import ZoneInfo
 from openpyxl import load_workbook
 from openpyxl.utils import get_column_letter
 from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
@@ -352,7 +353,8 @@ class ExcelExportServiceV2:
                 self._update_cell_preserve_style(summary_sheet, 'B2', selected_company, 's')
                 self._update_cell_preserve_style(summary_sheet, 'B3', current_report.get('vehicle_plate', 'N/A'), 's')
                 self._update_cell_preserve_style(summary_sheet, 'B4', current_report.get('file_name', 'N/A'), 's')
-                self._update_cell_preserve_style(summary_sheet, 'B5', datetime.now().strftime('%d/%m/%Y %H:%M'), 's')
+                santiago_now = datetime.now(ZoneInfo('America/Santiago'))
+                self._update_cell_preserve_style(summary_sheet, 'B5', santiago_now.strftime('%d/%m/%Y %H:%M'), 's')
                 
                 # Extraer summary del reporte
                 summary = current_report.get('summary', {})

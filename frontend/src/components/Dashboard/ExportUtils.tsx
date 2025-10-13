@@ -54,15 +54,15 @@ export const captureChartAsImage = async (
 export const getAlarmColor = (type: string): string => {
   const colors: Record<string, string> = {
     'cinturon': '#b71c1c',
-    'distraido': '#e65100',
-    'cruce': '#7e26b4ff',
+    'distraido': '#ffa724ff',
+    'cruce': '#7c14a5ff',
     'distancia': '#0d47a1',
-    'fatiga': '#f9a825',
+    'fatiga': '#42b4b8ff',
     'frenada': '#7fc079ff',
     'stop': '#424242',
-    'telefono': '#398d7fff',
-    'boton': '#437a58ff',
-    'video': '#ae32b3ff',
+    'telefono': '#2e7400ff',
+    'boton': '#f7d73aff',
+    'video': '#fc96ffff',
   }
   
   const normalized = type.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')

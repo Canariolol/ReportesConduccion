@@ -5,7 +5,7 @@ import { captureChartAsImage, formatTimestamp } from '../components/Dashboard/Ex
 import { applyEnhancedStyles } from '../components/Dashboard/ExcelStyleUtils';
 
 // URL de la API - configurable para desarrollo y producción
-const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8080';
 
 export const exportToExcelBackend = async (
   currentReport: any,
@@ -575,12 +575,35 @@ export const exportToPDF = async (
       
       pdf.setFontSize(10);
       pdf.setTextColor(255, 255, 255);
-      pdf.text('Fecha', 17, tableStartY + 4);
-      pdf.text('Patente', 52, tableStartY + 4); // Ajustado posición
-      pdf.text('Tipo', 97, tableStartY + 4); // Ajustado posición (más a la derecha para más espacio)
-      pdf.text('Conductor', 127, tableStartY + 4); // Ajustado posición (más a la izquierda)
-      pdf.text('Comentarios', 152, tableStartY + 4); // Ajustado posición
+      const columnXPositions = {
+        date: 17,
+        plate: 52,
+        type: 85,
+        driver: 127,
+        comments: 152,
+      };
+      pdf.text('Fecha', columnXPositions.date, tableStartY + 4);
+      pdf.text('Patente', columnXPositions.plate, tableStartY + 4); // Ajustado posicion
+      pdf.text('Tipo', columnXPositions.type, tableStartY + 4); // Ajustado posicion
+      pdf.text('Conductor', columnXPositions.driver, tableStartY + 4); // Ajustado posicion
+      pdf.text('Comentarios', columnXPositions.comments, tableStartY + 4); // Ajustado posicion
       
+      // Utilidad para truncar cadenas al ancho disponible en cada columna
+      const truncateToColumnWidth = (value: string, maxWidth: number) => {
+        const text = (value ?? '').toString().trim();
+        if (!text) return '';
+        const ellipsis = '...';
+        if (pdf.getTextWidth(text) <= maxWidth) {
+          return text;
+        }
+        let truncated = text;
+        while (truncated.length > 0 && pdf.getTextWidth(`${truncated}${ellipsis}`) > maxWidth) {
+          truncated = truncated.slice(0, -1).trimEnd();
+        }
+        const candidate = truncated ? `${truncated}${ellipsis}` : ellipsis;
+        return pdf.getTextWidth(candidate) <= maxWidth ? candidate : ellipsis;
+      };
+
       // Contenido de la tabla - MOSTRAR TODOS LOS EVENTOS
       pdf.setTextColor(0, 0, 0);
       let currentY = tableStartY + rowHeight;
@@ -602,11 +625,11 @@ export const exportToPDF = async (
           
           pdf.setFontSize(10);
           pdf.setTextColor(255, 255, 255);
-          pdf.text('Fecha', 17, currentY + 4);
-          pdf.text('Patente', 52, currentY + 4);
-          pdf.text('Tipo', 87, currentY + 4);
-          pdf.text('Conductor', 107, currentY + 4);
-          pdf.text('Comentarios', 142, currentY + 4);
+          pdf.text('Fecha', columnXPositions.date, currentY + 4);
+          pdf.text('Patente', columnXPositions.plate, currentY + 4);
+          pdf.text('Tipo', columnXPositions.type, currentY + 4);
+          pdf.text('Conductor', columnXPositions.driver, currentY + 4);
+          pdf.text('Comentarios', columnXPositions.comments, currentY + 4);
           
           currentY += rowHeight;
           pdf.setTextColor(0, 0, 0);
@@ -623,20 +646,23 @@ export const exportToPDF = async (
         
         pdf.setFontSize(8);
         pdf.setTextColor(0, 0, 0);
-        pdf.text(formattedDate, 17, currentY + 4);
-        pdf.text(event.vehiclePlate, 52, currentY + 4); // Ajustado posición
-        pdf.text(event.alarmType, 97, currentY + 4); // Ajustado posición (más a la derecha para más espacio)
-        
+        const dateText = truncateToColumnWidth(formattedDate, colWidths[0] - 2);
+        pdf.text(dateText, columnXPositions.date, currentY + 4);
+        const plateText = truncateToColumnWidth(event.vehiclePlate ?? '', colWidths[1] - 2);
+        pdf.text(plateText || 'Sin datos', columnXPositions.plate, currentY + 4); // Ajustado posicion
+        const alarmType = event.alarmType ?? 'Sin tipo';
+        const truncatedType = truncateToColumnWidth(alarmType, colWidths[2] - 2);
+        pdf.text(truncatedType, columnXPositions.type, currentY + 4); // Ajustado posicion (mas a la derecha para mas espacio)
+
         // Conductor - limitar contenido para que no pase a la siguiente columna
-        const driver = event.driver || 'Sin conductor';
-        const truncatedDriver = driver.length > 15 ? driver.substring(0, 15) + '...' : driver;
-        pdf.text(truncatedDriver, 127, currentY + 4); // Ajustado posición (más a la izquierda)
-        
+        const driver = event.driver ?? 'Sin conductor';
+        const truncatedDriver = truncateToColumnWidth(driver, colWidths[3] - 2);
+        pdf.text(truncatedDriver || 'Sin conductor', columnXPositions.driver, currentY + 4); // Ajustado posicion (mas a la izquierda)
+
         // Comentarios truncados intencionalmente
-        const comments = event.comments || 'Sin comentarios';
-        const truncatedComments = comments.length > 25 ? comments.substring(0, 25) + '...' : comments;
-        pdf.text(truncatedComments, 152, currentY + 4); // Ajustado posición
-        
+        const comments = event.comments ?? 'Sin comentarios';
+        const truncatedComments = truncateToColumnWidth(comments, colWidths[4] - 2);
+        pdf.text(truncatedComments || 'Sin comentarios', columnXPositions.comments, currentY + 4); // Ajustado posicion
         // Incrementar currentY para la siguiente fila
         currentY += rowHeight;
       }
@@ -723,3 +749,6 @@ export const exportToPDF = async (
     setModalContent('No se pudo generar el reporte PDF. Por favor, intente nuevamente.');
   }
 };
+
+
+

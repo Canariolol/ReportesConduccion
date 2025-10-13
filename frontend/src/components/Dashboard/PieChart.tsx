@@ -14,14 +14,20 @@ interface PieChartProps {
   getAlarmColor: (type: string) => string
 }
 
+// No mostrar etiquetas en el grafico cuando el porcentaje es muy pequeno
+const MIN_PERCENT_FOR_LABEL = 0.04
+
 const PieChartComponent = forwardRef<HTMLDivElement, PieChartProps>(({ data, getAlarmColor }, ref) => {
   const internalRef = useRef<HTMLDivElement>(null)
   
   // Exponer el ref al componente padre
- useImperativeHandle(ref, () => internalRef.current as HTMLDivElement)
+  useImperativeHandle(ref, () => internalRef.current as HTMLDivElement)
 
-  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, name }: any) => {
+  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
     const RADIAN = Math.PI / 180
+    if (!percent || percent < MIN_PERCENT_FOR_LABEL) {
+      return null
+    }
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5
     const x = cx + radius * Math.cos(-midAngle * RADIAN)
     const y = cy + radius * Math.sin(-midAngle * RADIAN)
@@ -121,3 +127,4 @@ const PieChartComponent = forwardRef<HTMLDivElement, PieChartProps>(({ data, get
 PieChartComponent.displayName = 'PieChartComponent'
 
 export default PieChartComponent
+
