@@ -1,8 +1,57 @@
-import { format } from 'date-fns';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import { captureChartAsImage, formatTimestamp } from '../components/Dashboard/ExportUtils';
 import { applyEnhancedStyles } from '../components/Dashboard/ExcelStyleUtils';
+
+type SantiagoDateParts = Record<'day' | 'month' | 'year' | 'hour' | 'minute' | 'second', string>;
+
+const santiagoDateTimeFormatter = new Intl.DateTimeFormat('es-CL', {
+  timeZone: 'America/Santiago',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+});
+
+const getSantiagoDateParts = (date: Date): SantiagoDateParts => {
+  const parts: SantiagoDateParts = {
+    day: '00',
+    month: '00',
+    year: '0000',
+    hour: '00',
+    minute: '00',
+    second: '00',
+  };
+
+  santiagoDateTimeFormatter.formatToParts(date).forEach((part) => {
+    switch (part.type) {
+      case 'day':
+      case 'month':
+      case 'year':
+      case 'hour':
+      case 'minute':
+      case 'second':
+        parts[part.type] = part.value;
+        break;
+      default:
+        break;
+    }
+  });
+
+  return parts;
+};
+
+const formatSantiagoDateTime = (date: Date): string => {
+  const parts = getSantiagoDateParts(date);
+  return `${parts.day}/${parts.month}/${parts.year} ${parts.hour}:${parts.minute}`;
+};
+
+const formatSantiagoTimestampForFile = (date: Date): string => {
+  const parts = getSantiagoDateParts(date);
+  return `${parts.year}${parts.month}${parts.day}_${parts.hour}${parts.minute}`;
+};
 
 export const exportToExcel = (
   currentReport: any,
@@ -71,7 +120,7 @@ export const exportToExcel = (
           updateCell('B2', selectedCompany || 'N/A', 's');
           updateCell('B3', currentReport.vehicle_plate, 's');
           updateCell('B4', currentReport.file_name, 's');
-          updateCell('B5', format(new Date(), 'dd/MM/yyyy HH:mm'), 's');
+          updateCell('B5', formatSantiagoDateTime(new Date()), 's');
 
           // Actualizar métricas
           updateCell('A9', 'Total de Alarmas', 's');
@@ -145,7 +194,7 @@ export const exportToExcel = (
 
         // --- GUARDAR ARCHIVO ---
         const companySuffix = selectedCompany ? `_${selectedCompany.replace(/\s+/g, '_')}` : '';
-        XLSX.writeFile(workbook, `reporte_conducción_${currentReport.vehicle_plate}${companySuffix}_${format(new Date(), 'yyyyMMdd_HHmm')}.xlsx`);
+        XLSX.writeFile(workbook, `reporte_conducción_${currentReport.vehicle_plate}${companySuffix}_${formatSantiagoTimestampForFile(new Date())}.xlsx`);
 
         setModalLoading(false);
         setModalTitle('Exportación Completada');
@@ -177,7 +226,7 @@ export const exportToExcel = (
           ['Empresa:', selectedCompany || 'N/A'],
           ['Vehículo:', currentReport.vehicle_plate],
           ['Archivo:', currentReport.file_name],
-          ['Fecha de Exportación:', format(new Date(), 'dd/MM/yyyy HH:mm')],
+          ['Fecha de Exportación:', formatSantiagoDateTime(new Date())],
           [], // Fila vacía
           ['Resumen de Métricas'],
           ['Métrica', 'Valor'],
@@ -220,7 +269,7 @@ export const exportToExcel = (
 
         // --- GUARDAR ARCHIVO ---
         const companySuffix = selectedCompany ? `_${selectedCompany.replace(/\s+/g, '_')}` : '';
-        XLSX.writeFile(styledWorkbook, `reporte_conducción_${currentReport.vehicle_plate}${companySuffix}_${format(new Date(), 'yyyyMMdd_HHmm')}.xlsx`);
+        XLSX.writeFile(styledWorkbook, `reporte_conducción_${currentReport.vehicle_plate}${companySuffix}_${formatSantiagoTimestampForFile(new Date())}.xlsx`);
 
         setModalLoading(false);
         setModalTitle('Exportación Completada');
@@ -324,7 +373,7 @@ export const exportToPDF = async (
       infoY += 8;
       pdf.text(`Archivo: ${currentReport.file_name}`, infoX, infoY);
       infoY += 8;
-      pdf.text(`Fecha: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, infoX, infoY);
+      pdf.text(`Fecha: ${formatSantiagoDateTime(new Date())}`, infoX, infoY);
       
       return infoY + 10; // Devolver la posición Y después del encabezado
     };
@@ -688,7 +737,7 @@ export const exportToPDF = async (
     
     // Guardar el PDF
     const companySuffix = selectedCompany ? `_${selectedCompany.replace(/\s+/g, '_')}` : '';
-    const fileName = `reporte_conducción_${currentReport.vehicle_plate}${companySuffix}_${format(new Date(), 'yyyyMMdd_HHmm')}.pdf`;
+    const fileName = `reporte_conducción_${currentReport.vehicle_plate}${companySuffix}_${formatSantiagoTimestampForFile(new Date())}.pdf`;
     pdf.save(fileName);
     
     console.log(`PDF generado exitosamente con todos los ${filteredEvents.length} eventos filtrados`);

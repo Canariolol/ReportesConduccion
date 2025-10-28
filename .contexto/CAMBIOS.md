@@ -174,7 +174,7 @@ frontend/
 - Configuración de CORS para producción
 
 #### ✅ Resultados
-- **Backend**: API funcionando en https://reportes-conduccion-api-*.run.app
+- **Backend**: API funcionando en https://reportes-conduccion-backend-51038157662.us-central1.run.app
 - **Frontend**: Conectado correctamente con backend
 - **Procesamiento**: Excel manejado correctamente en producción
 - **CORS**: Configuración segura para dominios permitidos

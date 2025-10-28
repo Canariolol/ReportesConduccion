@@ -304,18 +304,31 @@ class ExcelExportServiceV2:
     
     def _format_timestamp(self, timestamp: str) -> str:
         """
-        Formatea un timestamp para mostrar en Excel
+        Formatea un timestamp para mostrar en Excel, ajustando a la zona horaria America/Santiago (UTC-3)
         """
         try:
+            # Zona horaria de Santiago
+            santiago_tz = ZoneInfo('America/Santiago')
+            
             # Si es un timestamp en formato Unix
             if timestamp.isdigit():
-                dt = datetime.fromtimestamp(int(timestamp))
-                return dt.strftime('%d/%m/%Y %H:%M:%S')
+                # Convertir timestamp UTC a datetime en Santiago
+                dt_utc = datetime.fromtimestamp(int(timestamp), tz=ZoneInfo('UTC'))
+                dt_santiago = dt_utc.astimezone(santiago_tz)
+                return dt_santiago.strftime('%d/%m/%Y %H:%M:%S')
             
             # Si ya es una fecha en formato string, intentar formatearla
             try:
+                # Reemplazar 'Z' con UTC y parsear
                 dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
-                return dt.strftime('%d/%m/%Y %H:%M:%S')
+                
+                # Si no tiene información de zona horaria, asumir que es UTC
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=ZoneInfo('UTC'))
+                
+                # Convertir a zona horaria de Santiago
+                dt_santiago = dt.astimezone(santiago_tz)
+                return dt_santiago.strftime('%d/%m/%Y %H:%M:%S')
             except:
                 return timestamp
                 
@@ -353,7 +366,7 @@ class ExcelExportServiceV2:
                 self._update_cell_preserve_style(summary_sheet, 'B2', selected_company, 's')
                 self._update_cell_preserve_style(summary_sheet, 'B3', current_report.get('vehicle_plate', 'N/A'), 's')
                 self._update_cell_preserve_style(summary_sheet, 'B4', current_report.get('file_name', 'N/A'), 's')
-                santiago_now = datetime.now(ZoneInfo('America/Santiago'))
+                santiago_now = datetime.now(ZoneInfo('UTC')).astimezone(ZoneInfo('America/Santiago'))
                 self._update_cell_preserve_style(summary_sheet, 'B5', santiago_now.strftime('%d/%m/%Y %H:%M'), 's')
                 
                 # Extraer summary del reporte

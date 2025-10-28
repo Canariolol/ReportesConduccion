@@ -74,6 +74,24 @@ export const getAlarmColor = (type: string): string => {
 
 export const formatTimestamp = (timestamp: string): string => {
   try {
+    // Si es un timestamp numérico (Unix), convertirlo y ajustar a zona horaria de Santiago
+    if (/^\d+$/.test(timestamp)) {
+      const unixTimestamp = parseInt(timestamp)
+      const date = new Date(unixTimestamp * 1000) // Convertir a milisegundos
+      
+      // Formatear en zona horaria de America/Santiago
+      return new Intl.DateTimeFormat('es-CL', {
+        timeZone: 'America/Santiago',
+        day: '2-digit',
+        month: '2-digit',
+        year: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      }).format(date).replace(/\//g, '/').replace(/,/g, ',')
+    }
+    
     // Parsear el timestamp en formato "14/09/25, 11:38:35"
     const timestampStr = timestamp
     const [datePart, timePart] = timestampStr.split(', ')
@@ -82,17 +100,37 @@ export const formatTimestamp = (timestamp: string): string => {
     
     // Crear fecha con formato correcto (añadir 2000 al año de 2 dígitos)
     const fullYear = `20${year}`
-    const normalizedDate = `${day}/${month}/${fullYear}, ${hours}:${minutes}:${seconds}`
     
-    // Validar que la fecha sea válida
-    const eventDate = new Date(`${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hours}:${minutes}:${seconds}`)
-    if (!isNaN(eventDate.getTime())) {
-      return normalizedDate
+    // Crear fecha en UTC y luego convertir a zona horaria de Santiago
+    const utcDate = new Date(`${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hours}:${minutes}:${seconds}Z`)
+    
+    if (!isNaN(utcDate.getTime())) {
+      // Formatear en zona horaria de America/Santiago
+      return new Intl.DateTimeFormat('es-CL', {
+        timeZone: 'America/Santiago',
+        day: '2-digit',
+        month: '2-digit',
+        year: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      }).format(utcDate).replace(/\//g, '/').replace(/,/g, ',')
     } else {
       // Si falla el parsing, intentar con el timestamp original
       const originalDate = new Date(timestamp)
       if (!isNaN(originalDate.getTime())) {
-        return format(originalDate, 'dd/MM/yyyy, HH:mm:ss')
+        // Formatear en zona horaria de America/Santiago
+        return new Intl.DateTimeFormat('es-CL', {
+          timeZone: 'America/Santiago',
+          day: '2-digit',
+          month: '2-digit',
+          year: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        }).format(originalDate).replace(/\//g, '/').replace(/,/g, ',')
       } else {
         return timestamp || 'Fecha inválida'
       }
@@ -103,7 +141,17 @@ export const formatTimestamp = (timestamp: string): string => {
     try {
       const eventDate = new Date(timestamp)
       if (!isNaN(eventDate.getTime())) {
-        return format(eventDate, 'dd/MM/yyyy, HH:mm:ss')
+        // Formatear en zona horaria de America/Santiago
+        return new Intl.DateTimeFormat('es-CL', {
+          timeZone: 'America/Santiago',
+          day: '2-digit',
+          month: '2-digit',
+          year: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        }).format(eventDate).replace(/\//g, '/').replace(/,/g, ',')
       }
     } catch (secondError) {
       console.error('Error en segundo intento de parsing:', timestamp, secondError)

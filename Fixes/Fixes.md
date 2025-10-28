@@ -4,6 +4,7 @@
 - Ajustado el pie chart para usar un naranja mas claro y ocultar etiquetas cuando el porcentaje es menor al umbral definido, evitando colores similares y valores superpuestos.
 - Truncado dinamicamente los textos del reporte PDF (tipo de alarma, patente, conductor y comentarios) segun el ancho disponible para cada columna, evitando solapamientos en tablas largas.
 - Alineado el contenido de la columna Tipo del PDF con el encabezado correspondiente.
+- Forzada la generación de fechas/hora en el fallback de exportaciones (Excel/PDF) a la zona horaria America/Santiago para mantener consistencia con el backend.
 
 ## Backend
 - Normalizada la fecha/hora del resumen del Excel exportado a la zona horaria America/Santiago para reflejar correctamente la hora local del reporte.

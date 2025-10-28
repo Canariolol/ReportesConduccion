@@ -1,11 +1,77 @@
-import { format } from 'date-fns';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import { captureChartAsImage, formatTimestamp } from '../components/Dashboard/ExportUtils';
 import { applyEnhancedStyles } from '../components/Dashboard/ExcelStyleUtils';
 
 // URL de la API - configurable para desarrollo y producción
-const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8080';
+// En desarrollo, intentar usar el puerto del backend (8000) si está disponible, sino usar el fallback
+const getApiBaseUrl = () => {
+  // Si estamos en desarrollo y hay una variable de entorno, usarla
+  if (import.meta.env?.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  
+  // En desarrollo, antes usaba 8000, ahora usa 8080
+  if (import.meta.env.DEV) {
+    return 'http://localhost:8080';
+  }
+  
+  // En producción, usar el puerto 8080
+  return 'https://reportes-conduccion-backend-51038157662.us-central1.run.app:8080';
+};
+
+const API_BASE_URL = getApiBaseUrl();
+
+type SantiagoDateParts = Record<'day' | 'month' | 'year' | 'hour' | 'minute' | 'second', string>;
+
+const santiagoDateTimeFormatter = new Intl.DateTimeFormat('es-CL', {
+  timeZone: 'America/Santiago',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hour12: false,
+});
+
+const getSantiagoDateParts = (date: Date): SantiagoDateParts => {
+  const parts: SantiagoDateParts = {
+    day: '00',
+    month: '00',
+    year: '0000',
+    hour: '00',
+    minute: '00',
+    second: '00',
+  };
+
+  santiagoDateTimeFormatter.formatToParts(date).forEach((part) => {
+    switch (part.type) {
+      case 'day':
+      case 'month':
+      case 'year':
+      case 'hour':
+      case 'minute':
+      case 'second':
+        parts[part.type] = part.value;
+        break;
+      default:
+        break;
+    }
+  });
+
+  return parts;
+};
+
+const formatSantiagoDateTime = (date: Date): string => {
+  const parts = getSantiagoDateParts(date);
+  return `${parts.day}/${parts.month}/${parts.year} ${parts.hour}:${parts.minute}`;
+};
+
+const formatSantiagoTimestampForFile = (date: Date): string => {
+  const parts = getSantiagoDateParts(date);
+  return `${parts.year}${parts.month}${parts.day}_${parts.hour}${parts.minute}`;
+};
 
 export const exportToExcelBackend = async (
   currentReport: any,
@@ -58,7 +124,7 @@ export const exportToExcelBackend = async (
     
     // Generar nombre de archivo
     const companySuffix = selectedCompany ? `_${selectedCompany.replace(/\s+/g, '_')}` : '';
-    const timestamp = format(new Date(), 'yyyyMMdd_HHmm');
+    const timestamp = formatSantiagoTimestampForFile(new Date());
     const filename = `reporte_conducción_${currentReport.vehicle_plate}${companySuffix}_${timestamp}.xlsx`;
 
     // Crear URL para descarga
@@ -138,7 +204,7 @@ export const exportToExcelFallback = (
       ['Empresa:', selectedCompany || 'N/A'],
       ['Vehículo:', currentReport.vehicle_plate],
       ['Archivo:', currentReport.file_name],
-      ['Fecha de Exportación:', format(new Date(), 'dd/MM/yyyy HH:mm')],
+      ['Fecha de Exportación:', formatSantiagoDateTime(new Date())],
       [],
       ['Resumen de Métricas'],
       ['Métrica', 'Valor'],
@@ -181,7 +247,7 @@ export const exportToExcelFallback = (
 
     // Guardar archivo
     const companySuffix = selectedCompany ? `_${selectedCompany.replace(/\s+/g, '_')}` : '';
-    XLSX.writeFile(styledWorkbook, `reporte_conducción_${currentReport.vehicle_plate}${companySuffix}_${format(new Date(), 'yyyyMMdd_HHmm')}.xlsx`);
+    XLSX.writeFile(styledWorkbook, `reporte_conducción_${currentReport.vehicle_plate}${companySuffix}_${formatSantiagoTimestampForFile(new Date())}.xlsx`);
 
     setModalLoading(false);
     setModalTitle('Exportación Completada');
@@ -327,7 +393,7 @@ export const exportToPDF = async (
       infoY += 8;
       pdf.text(`Archivo: ${currentReport.file_name}`, infoX, infoY);
       infoY += 8;
-      pdf.text(`Fecha: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, infoX, infoY);
+      pdf.text(`Fecha: ${formatSantiagoDateTime(new Date())}`, infoX, infoY);
       
       return infoY + 10; // Devolver la posición Y después del encabezado
     };
@@ -567,7 +633,7 @@ export const exportToPDF = async (
       const tableStartY = startY + 10;
       const rowHeight = 6;
       // CORREGIDO: Ajustar anchos de columnas - Tipo más ancha, Conductor más angosta
-      const colWidths = [25, 35, 50, 20, pageWidth - 130]; // Fechas, Patente, Tipo, Conductor, Comentarios
+      const colWidths = [25, 35, 50, 20, pageWidth - 165]; // Fechas, Patente, Tipo, Conductor, Comentarios
       
       // Encabezados de tabla
       pdf.setFillColor(primaryColor);
@@ -732,7 +798,7 @@ export const exportToPDF = async (
     
     // Guardar el PDF
     const companySuffix = selectedCompany ? `_${selectedCompany.replace(/\s+/g, '_')}` : '';
-    const fileName = `reporte_conducción_${currentReport.vehicle_plate}${companySuffix}_${format(new Date(), 'yyyyMMdd_HHmm')}.pdf`;
+    const fileName = `reporte_conducción_${currentReport.vehicle_plate}${companySuffix}_${formatSantiagoTimestampForFile(new Date())}.pdf`;
     pdf.save(fileName);
     
     console.log(`PDF generado exitosamente con todos los ${filteredEvents.length} eventos filtrados`);
