@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" id="svg-alert-yellow" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="gradYellow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff5a8"/><stop offset="1" stop-color="#ffd84d"/>
+    </linearGradient>
+  </defs>
+  <rect x="28" y="92" width="72" height="12" rx="6" fill="#2b2f3a"/>
+  <rect x="38" y="36" width="52" height="50" rx="12" fill="url(#gradYellow)" stroke="#b48a00" stroke-width="3"/>
+  <rect x="44" y="86" width="40" height="6" rx="3" fill="#444a58"/>
+  <g stroke="#fff3a6" stroke-linecap="round" stroke-width="4" opacity=".9">
+    <path d="M64 20v10"/><path d="M96 28l-7 7"/><path d="M32 28l7 7"/><path d="M106 56h-10"/><path d="M22 56h10"/>
+  </g>
+</svg>

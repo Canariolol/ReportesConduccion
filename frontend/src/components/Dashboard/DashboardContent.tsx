@@ -119,6 +119,7 @@ const DashboardContent: React.FC<DashboardContentProps> = ({
         selectedCompany={selectedCompany}
         availableCompanies={availableCompanies}
         onCompanyChange={setSelectedCompany}
+        currentReport={currentReport}
       />
 
       <EventsTable

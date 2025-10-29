@@ -72,6 +72,92 @@ export const getAlarmColor = (type: string): string => {
   return '#64b5f6'
 }
 
+export const captureRankingAsImage = async (
+  ref: { current: HTMLDivElement | null },
+  fileName: string,
+  options?: { scale?: number; maxWidth?: number }
+): Promise<ChartCaptureResult> => {
+  console.log(`Intentando capturar ranking ${fileName}...`)
+  console.log(`Referencia recibida:`, ref)
+  console.log(`Referencia actual:`, ref?.current)
+  
+  if (!ref?.current) {
+    console.error(`Error: No se encontró el elemento DOM para ${fileName}`)
+    return { imageData: '', width: 0, height: 0 }
+  }
+  
+  try {
+    console.log(`Importando html2canvas para ranking ${fileName}...`)
+    const html2canvas = (await import('html2canvas')).default
+    console.log(`html2canvas importado correctamente para ranking ${fileName}`)
+    
+    // Esperar un momento para asegurar que todos los estilos se apliquen
+    await new Promise(resolve => setTimeout(resolve, 100))
+    
+    // Configuración optimizada para imágenes más pequeñas
+    const scale = options?.scale || 1.5 // Reducido de 2 a 1.5 para imágenes más pequeñas
+    const maxWidth = options?.maxWidth || 400 // Ancho máximo para las imágenes
+    
+    // Calcular dimensiones optimizadas
+    const originalWidth = ref.current.offsetWidth
+    const originalHeight = ref.current.offsetHeight
+    const aspectRatio = originalHeight / originalWidth
+    
+    let targetWidth = Math.min(originalWidth, maxWidth)
+    let targetHeight = targetWidth * aspectRatio
+    
+    console.log(`Iniciando captura de ranking ${fileName} con html2canvas...`)
+    console.log(`Dimensiones originales: ${originalWidth}x${originalHeight}`)
+    console.log(`Dimensiones objetivo: ${targetWidth}x${targetHeight}`)
+    
+    const canvas = await html2canvas(ref.current, {
+      backgroundColor: '#ffffff',
+      scale: scale, // Reducido para imágenes más pequeñas
+      useCORS: true,
+      allowTaint: true,
+      width: originalWidth,
+      height: originalHeight,
+      logging: false, // Deshabilitar logging para reducir ruido
+      // Ignorar elementos que puedan causar problemas
+      ignoreElements: (element) => {
+        // Ignorar botones o elementos interactivos
+        return element.tagName === 'BUTTON' ||
+               element.classList.contains('MuiButton-root') ||
+               element.classList.contains('MuiIconButton-root')
+      }
+    })
+    
+    console.log(`Captura de ranking ${fileName} completada. Dimensiones canvas: ${canvas.width}x${canvas.height}`)
+    
+    // Crear un canvas temporal para redimensionar la imagen
+    const resizedCanvas = document.createElement('canvas')
+    const resizedCtx = resizedCanvas.getContext('2d')
+    
+    if (!resizedCtx) {
+      throw new Error('No se pudo obtener el contexto del canvas redimensionado')
+    }
+    
+    // Establecer dimensiones redimensionadas
+    resizedCanvas.width = targetWidth * scale
+    resizedCanvas.height = targetHeight * scale
+    
+    // Dibujar la imagen redimensionada
+    resizedCtx.drawImage(canvas, 0, 0, resizedCanvas.width, resizedCanvas.height)
+    
+    const imageData = resizedCanvas.toDataURL('image/png', 0.9) // Calidad 90% para reducir tamaño
+    console.log(`Imagen de ranking redimensionada y convertida a base64 para ${fileName}. Longitud: ${imageData.length}`)
+    
+    return {
+      imageData,
+      width: resizedCanvas.width,
+      height: resizedCanvas.height
+    }
+  } catch (error) {
+    console.error(`Error capturando ranking ${fileName}:`, error)
+    return { imageData: '', width: 0, height: 0 }
+  }
+}
+
 export const formatTimestamp = (timestamp: string): string => {
   try {
     // Si es un timestamp numérico (Unix), convertirlo y ajustar a zona horaria de Santiago

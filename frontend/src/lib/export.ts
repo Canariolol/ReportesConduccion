@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
-import { captureChartAsImage, formatTimestamp } from '../components/Dashboard/ExportUtils';
+import { captureChartAsImage, captureRankingAsImage, formatTimestamp } from '../components/Dashboard/ExportUtils';
 import { applyEnhancedStyles } from '../components/Dashboard/ExcelStyleUtils';
 
 // URL de la API - configurable para desarrollo y producción
@@ -818,3 +818,282 @@ export const exportToPDF = async (
 
 
 
+
+
+export const exportRankingsToPDF = async (
+  rankingsData: any,
+  companyName: string,
+  fileName: string,
+  countByMode: 'truck' | 'driver',
+  setModalTitle: (title: string) => void,
+  setModalContent: (content: string) => void,
+  setModalLoading: (loading: boolean) => void,
+  setExportModalOpen: (open: boolean) => void,
+  topAlarmsRef?: React.RefObject<HTMLDivElement>,
+  allAlarmsRef?: React.RefObject<HTMLDivElement>,
+  bestPerformersRef?: React.RefObject<HTMLDivElement>
+) => {
+  // Mostrar modal de carga
+  setModalTitle('Exportando Rankings a PDF');
+  setModalContent('Generando reporte PDF de rankings con screenshots optimizados...');
+  setModalLoading(true);
+  setExportModalOpen(true);
+  
+  try {
+    console.log('Iniciando generación de PDF de rankings con screenshots...');
+    
+    // Importar las librerías dinámicamente
+    const [jsPDF] = await Promise.all([
+      import('jspdf')
+    ]);
+    
+    const { default: JsPDF } = jsPDF;
+    
+    // Crear un nuevo documento PDF
+    const pdf = new JsPDF('p', 'mm', 'a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    
+    // Configurar colores y estilos
+    const primaryColor = '#1565C0';
+    
+    // Función para agregar el logo como marca de agua
+    const addWatermark = async () => {
+      try {
+        // Cargar el logo gris desde la raíz del proyecto
+        const logoResponse = await fetch('/west_logo_gris.png');
+        if (logoResponse.ok) {
+          const logoBlob = await logoResponse.blob();
+          const logoBase64 = await blobToBase64(logoBlob);
+          
+          // Agregar logo como marca de agua en todas las páginas
+          const totalPages = pdf.getNumberOfPages();
+          for (let i = 1; i <= totalPages; i++) {
+            pdf.setPage(i);
+            // Logo con dimensiones proporcionales para mantener proporción original
+            pdf.addImage(logoBase64, 'PNG', 6, 6, 31, 10);
+          }
+        }
+      } catch (error) {
+        console.error('Error al cargar el logo como marca de agua:', error);
+      }
+    };
+    
+    // Función para convertir blob a base64
+    const blobToBase64 = (blob: Blob): Promise<string> => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    };
+    
+    // Función para agregar el encabezado
+    const addHeader = () => {
+      // Título principal centrado
+      pdf.setFontSize(22);
+      pdf.setTextColor(primaryColor);
+      pdf.text('Top de Camiones y Alarmas', pageWidth / 2, 25, { align: 'center' });
+      
+      // Salto de línea y alinear a la izquierda la información
+      pdf.setFontSize(12);
+      pdf.setTextColor(100);
+      const infoX = 20;
+      let infoY = 40;
+      
+      pdf.text(`Empresa: ${companyName || 'N/A'}`, infoX, infoY);
+      infoY += 8;
+      
+      // Calcular cantidad de vehículos únicos
+      const uniqueVehicles = new Set([
+        ...rankingsData.topAlarms.map((item: any) => item.name),
+        ...rankingsData.bestPerformers.map((item: any) => item.name)
+      ]).size;
+      pdf.text(`Cantidad de Vehículos: ${uniqueVehicles}`, infoX, infoY);
+      infoY += 8;
+      
+      pdf.text(`Archivo fuente: ${fileName}`, infoX, infoY);
+      infoY += 8;
+      
+      pdf.text(`Fecha: ${formatSantiagoDateTime(new Date())}`, infoX, infoY);
+      
+      return infoY + 10; // Devolver la posición Y después del encabezado
+    };
+    
+    // Función para agregar el pie de página
+    const addFooter = (pageNumber: number, totalPages: number) => {
+      const footerY = pageHeight - 15;
+      
+      // Línea superior del footer
+      pdf.setDrawColor(primaryColor);
+      pdf.setLineWidth(0.5);
+      pdf.line(15, footerY - 5, pageWidth - 15, footerY - 5);
+      
+      // Texto del footer
+      pdf.setFontSize(10);
+      pdf.setTextColor(100);
+      pdf.text('West Ingeniería - Reporte de Rankings', 15, footerY);
+      pdf.text(`Página ${pageNumber} de ${totalPages}`, pageWidth - 30, footerY);
+      
+      // Información de contacto
+      pdf.setFontSize(8);
+      pdf.text('Generado por Sistema de Análisis de Alarmas', 15, footerY + 5);
+    };
+    
+    // Función para agregar rankings como imágenes (2 por fila)
+    const addRankingsAsImages = async (startY: number) => {
+      let currentY = startY;
+      
+      // Título de la sección
+      pdf.setFontSize(18);
+      pdf.setTextColor(primaryColor);
+      pdf.text('Rankings de Alarmas', 15, currentY);
+      
+      pdf.setDrawColor(primaryColor);
+      pdf.setLineWidth(0.3);
+      pdf.line(15, currentY + 3, pageWidth - 15, currentY + 3);
+      
+      currentY += 15;
+      
+      // Configuración para el layout de 2 imágenes por fila
+      const imageWidth = 85; // Ancho de cada imagen
+      const imageSpacing = 10; // Espacio entre imágenes
+      const rowSpacing = 15; // Espacio entre filas
+      const leftX = 20; // Posición X para la imagen izquierda
+      const rightX = leftX + imageWidth + imageSpacing; // Posición X para la imagen derecha
+      
+      // Capturar los rankings como imágenes
+      console.log('Capturando rankings como imágenes...');
+      
+      const topAlarmsResult = topAlarmsRef ? await captureRankingAsImage(topAlarmsRef, 'top-alarms', {
+        scale: 1.5,
+        maxWidth: 400
+      }) : { imageData: '', width: 0, height: 0 };
+      
+      const allAlarmsResult = allAlarmsRef ? await captureRankingAsImage(allAlarmsRef, 'all-alarms', {
+        scale: 1.5,
+        maxWidth: 400
+      }) : { imageData: '', width: 0, height: 0 };
+      
+      const bestPerformersResult = bestPerformersRef ? await captureRankingAsImage(bestPerformersRef, 'best-performers', {
+        scale: 1.5,
+        maxWidth: 400
+      }) : { imageData: '', width: 0, height: 0 };
+      
+      // Array con los resultados de captura y sus títulos
+      const rankings = [
+        {
+          title: `Top 10 ${countByMode === 'truck' ? 'Camiones' : 'Conductores'} con Más Alarmas`,
+          result: topAlarmsResult
+        },
+        {
+          title: 'Todas las Alarmas por Tipo',
+          result: allAlarmsResult
+        },
+        {
+          title: `Top 10 ${countByMode === 'truck' ? 'Camiones' : 'Conductores'} con Menos Alarmas`,
+          result: bestPerformersResult
+        }
+      ];
+      
+      // Agregar las imágenes en un layout de 2 por fila
+      for (let i = 0; i < rankings.length; i++) {
+        const ranking = rankings[i];
+        
+        // Verificar si necesitamos una nueva página
+        if (currentY + 80 > pageHeight - 30) {
+          pdf.addPage();
+          currentY = 35;
+        }
+        
+        // Determinar posición (izquierda o derecha)
+        const isLeft = i % 2 === 0;
+        const x = isLeft ? leftX : rightX;
+        
+        // Si es la primera de la fila, guardar la posición Y
+        if (isLeft) {
+          const rowStartY = currentY;
+        }
+        
+        // Agregar subtítulo
+        pdf.setFontSize(12);
+        pdf.setTextColor(primaryColor);
+        pdf.text(ranking.title, x, currentY);
+        
+        currentY += 8;
+        
+        // Agregar la imagen si se capturó correctamente
+        if (ranking.result.imageData) {
+          // Calcular altura manteniendo la proporción
+          const aspectRatio = ranking.result.height / ranking.result.width;
+          const imageHeight = imageWidth * aspectRatio;
+          
+          console.log(`Agregando ranking ${ranking.title} con dimensiones: ${imageWidth}x${imageHeight}`);
+          
+          pdf.addImage(
+            ranking.result.imageData,
+            'PNG',
+            x,
+            currentY,
+            imageWidth,
+            imageHeight
+          );
+          
+          currentY += imageHeight + 5;
+        } else {
+          // Si no se pudo capturar la imagen, mostrar un mensaje
+          pdf.setFontSize(10);
+          pdf.setTextColor(150);
+          pdf.text('No se pudo capturar la imagen', x, currentY + 10);
+          currentY += 20;
+        }
+        
+        // Si es la imagen derecha, añadir espacio entre filas
+        if (!isLeft) {
+          currentY += rowSpacing;
+        }
+      }
+      
+      return currentY;
+    };
+    
+    // Generar el PDF
+    console.log('Generando PDF de rankings con screenshots optimizados...');
+    const headerEndY = addHeader();
+    
+    let currentY = headerEndY;
+    
+    // Agregar rankings como imágenes
+    currentY = await addRankingsAsImages(currentY);
+    
+    // Agregar marca de agua a todas las páginas
+    await addWatermark();
+    
+    // Agregar footer a todas las páginas
+    const totalPages = pdf.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      pdf.setPage(i);
+      addFooter(i, totalPages);
+    }
+    
+    // Guardar el PDF
+    const companySuffix = companyName ? `_${companyName.replace(/\s+/g, '_')}` : '';
+    const modeSuffix = countByMode === 'truck' ? 'camiones' : 'conductores';
+    const pdfFileName = `rankings_${modeSuffix}${companySuffix}_${formatSantiagoTimestampForFile(new Date())}.pdf`;
+    pdf.save(pdfFileName);
+    
+    console.log(`PDF de rankings generado exitosamente con screenshots optimizados`);
+    
+    // Mostrar modal de éxito
+    setModalLoading(false);
+    setModalTitle('Exportación Completada');
+    setModalContent(`El reporte PDF de rankings se ha generado exitosamente con screenshots optimizados y organizados de a dos por fila.`);
+  } catch (error) {
+    console.error('Error al generar PDF de rankings:', error);
+    // Mostrar modal de error
+    setModalLoading(false);
+    setModalTitle('Error en Exportación');
+    setModalContent('No se pudo generar el reporte PDF de rankings. Por favor, intente nuevamente.');
+  }
+};
