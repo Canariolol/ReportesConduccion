@@ -386,8 +386,8 @@ export const captureRankingAsImage = async (
     await new Promise(resolve => setTimeout(resolve, 300))
     
     // Configuración optimizada para capturar rankings
-    const scale = options?.scale ?? 8 // Mayor escala para máxima nitidez (aumentado de 4 a 8)
-    const maxWidth = options?.maxWidth || 2400 // Mayor ancho para capturar más detalles (aumentado de 1200 a 2400)
+    const scale = options?.scale ?? 2 // Reducido de 8 a 2 para optimizar tamaño y legibilidad
+    const maxWidth = options?.maxWidth || 1200 // Reducido de 2400 a 1200 para optimizar tamaño
 
     const aspectRatio = originalHeight / originalWidth
     

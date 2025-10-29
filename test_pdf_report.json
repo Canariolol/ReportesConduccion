@@ -1,0 +1,26 @@
+{
+  "timestamp": "2025-10-29T19:13:05.029Z",
+  "configuration": {
+    "orientation": "horizontal",
+    "html2canvas": {
+      "scale": 2,
+      "maxWidth": 1200
+    },
+    "zoom": 1.5,
+    "centering": "automatic"
+  },
+  "structure": {
+    "totalPages": 4,
+    "introductionPage": true,
+    "rankingPages": 3,
+    "watermark": true,
+    "footer": true
+  },
+  "estimatedSize": 12,
+  "qualityChecks": {
+    "highResolution": true,
+    "optimizedSize": true,
+    "improvedLegibility": true,
+    "properCentering": true
+  }
+}

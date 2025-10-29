@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prueba de Generación de PDF de Rankings</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .step {
+            margin-bottom: 20px;
+            padding: 15px;
+            border-left: 4px solid #007bff;
+            background-color: #f8f9fa;
+        }
+        .code {
+            background-color: #f1f1f1;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            overflow-x: auto;
+        }
+        .button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .button:hover {
+            background-color: #0056b3;
+        }
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .warning {
+            color: #ffc107;
+            font-weight: bold;
+        }
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Prueba de Generación de PDF de Rankings</h1>
+        <p>Esta página te guiará paso a paso para probar la funcionalidad de generación de PDFs de rankings.</p>
+        
+        <div class="step">
+            <h3>Paso 1: Abrir la aplicación</h3>
+            <p>Haz clic en el siguiente botón para abrir la aplicación en una nueva pestaña:</p>
+            <button class="button" onclick="openApp()">Abrir Aplicación</button>
+        </div>
+        
+        <div class="step">
+            <h3>Paso 2: Inyectar datos de prueba</h3>
+            <p>Una vez que la aplicación esté cargada, sigue estas instrucciones:</p>
+            <ol>
+                <li>Abre la consola de desarrollador (F12 o Ctrl+Shift+I)</li>
+                <li>Copia y pega el siguiente código en la consola:</li>
+            </ol>
+            <div class="code" id="injectionCode">
+                // Cargando código de inyección...
+            </div>
+            <button class="button" onclick="copyInjectionCode()">Copiar Código</button>
+            <p id="copyStatus"></p>
+        </div>
+        
+        <div class="step">
+            <h3>Paso 3: Navegar a Rankings</h3>
+            <p>Después de inyectar los datos, navega a la página de Rankings usando el menú de navegación o directamente en:</p>
+            <div class="code">http://localhost:3006/rankings</div>
+        </div>
+        
+        <div class="step">
+            <h3>Paso 4: Generar PDF</h3>
+            <p>En la página de Rankings:</p>
+            <ol>
+                <li>Verifica que los datos se carguen correctamente (deberías ver 3 rankings)</li>
+                <li>Haz clic en el botón "Exportar PDF"</li>
+                <li>Ingresa un nombre de empresa cuando se solicite</li>
+                <li>Espera a que se complete la generación del PDF</li>
+            </ol>
+        </div>
+        
+        <div class="step">
+            <h3>Paso 5: Verificar resultados</h3>
+            <p>Una vez generado el PDF, verifica:</p>
+            <ul>
+                <li>El tamaño del archivo (debe ser menor a 20MB)</li>
+                <li>La primera página contiene el texto de introducción</li>
+                <li>Las páginas siguientes están en orientación horizontal</li>
+                <li>Los rankings se ven más grandes y legibles</li>
+                <li>Cada ranking está centrado en su página</li>
+            </ul>
+        </div>
+        
+        <div class="step">
+            <h3>Características implementadas:</h3>
+            <ul>
+                <li><span class="success">✓</span> Página de introducción con texto explicativo</li>
+                <li><span class="success">✓</span> Optimización de html2canvas (scale de 8 a 2, maxWidth de 2400px a 1200px)</li>
+                <li><span class="success">✓</span> Orientación horizontal para páginas de rankings</li>
+                <li><span class="success">✓</span> Zoom x1.5 y centrado de rankings</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Código de inyección de datos
+        const injectionCode = `
+// Datos de prueba para rankings
+const testData = {
+  id: "test-report-123",
+  user_id: "demo_user",
+  file_name: "Reporte StandLite2 - 3 camiones - 20 al 26 de octubre.xlsx",
+  vehicle_plate: "YHLE15",
+  date_range: {
+    start: "20/10/2025",
+    end: "26/10/2025"
+  },
+  summary: {
+    totalAlarms: 50,
+    alarmTypes: {
+      "Conductor distraído": 20,
+      "Cruce de carril": 12,
+      "Cinturón de seguridad": 6,
+      "Infracción de señal de stop": 4,
+      "Fatiga": 2,
+      "Teléfono Móvil": 5,
+      "Distancia de Seguridad": 1
+    },
+    videosRequested: 0
+  },
+  events: [
+    { timestamp: "20/10/25, 08:30:15", alarmType: "Conductor distraído", vehiclePlate: "YHLE15", driver: "Juan Pérez Silva (StandLite2)", comments: "Conductor mirando hacia abajo por más de 3 segundos.", severity: "Moderado" },
+    { timestamp: "20/10/25, 09:15:22", alarmType: "Cruce de carril", vehiclePlate: "MPGJ87", driver: "María González Rodríguez (StandLite2)", comments: "Cambio de carril sin señalizar debidamente.", severity: "Leve" },
+    { timestamp: "20/10/25, 10:45:33", alarmType: "Cinturón de seguridad", vehiclePlate: "QRIL76", driver: "Carlos López Muñoz (StandLite2)", comments: "Conductor sin cinturón de seguridad detectado.", severity: "Grave" },
+    { timestamp: "20/10/25, 11:20:44", alarmType: "Conductor distraído", vehiclePlate: "YHLE15", driver: "Juan Pérez Silva (StandLite2)", comments: "Detección de distracción visual prolongada.", severity: "Moderado" },
+    { timestamp: "20/10/25, 14:30:55", alarmType: "Teléfono Móvil", vehiclePlate: "MPGJ87", driver: "María González Rodríguez (StandLite2)", comments: "Uso de teléfono móvil mientras conduce detectado.", severity: "Grave" },
+    { timestamp: "20/10/25, 15:45:12", alarmType: "Cruce de carril", vehiclePlate: "QRIL76", driver: "Carlos López Muñoz (StandLite2)", comments: "Vehículo cruzando línea continua de carril.", severity: "Moderado" },
+    { timestamp: "20/10/25, 16:10:28", alarmType: "Conductor distraído", vehiclePlate: "YHLE15", driver: "Juan Pérez Silva (StandLite2)", comments: "Conductor no mantiene atención en la carretera.", severity: "Leve" },
+    { timestamp: "20/10/25, 17:35:41", alarmType: "Infracción de señal de stop", vehiclePlate: "MPGJ87", driver: "María González Rodríguez (StandLite2)", comments: "Vehículo no detuvo completamente en señal de stop.", severity: "Grave" },
+    { timestamp: "20/10/25, 18:20:08", alarmType: "Fatiga", vehiclePlate: "QRIL76", driver: "Carlos López Muñoz (StandLite2)", comments: "Signos de fatiga detectados en el conductor.", severity: "Crítico" },
+    { timestamp: "21/10/25, 07:45:19", alarmType: "Conductor distraído", vehiclePlate: "YHLE15", driver: "Juan Pérez Silva (StandLite2)", comments: "Posible uso de dispositivo móvil detectado.", severity: "Moderado" },
+    { timestamp: "21/10/25, 09:12:34", alarmType: "Cruce de carril", vehiclePlate: "MPGJ87", driver: "María González Rodríguez (StandLite2)", comments: "Maniobra de cambio de carril peligrosa detectada.", severity: "Moderado" },
+    { timestamp: "21/10/25, 10:30:45", alarmType: "Teléfono Móvil", vehiclePlate: "QRIL76", driver: "Carlos López Muñoz (StandLite2)", comments: "Conductor manipulando dispositivo electrónico.", severity: "Grave" },
+    { timestamp: "21/10/25, 11:45:56", alarmType: "Conductor distraído", vehiclePlate: "YHLE15", driver: "Juan Pérez Silva (StandLite2)", comments: "Detección de distracción visual prolongada.", severity: "Leve" },
+    { timestamp: "21/10/25, 14:20:12", alarmType: "Cinturón de seguridad", vehiclePlate: "MPGJ87", driver: "María González Rodríguez (StandLite2)", comments: "Sensor de cinturón desactivado durante la conducción.", severity: "Grave" },
+    { timestamp: "21/10/25, 15:35:28", alarmType: "Cruce de carril", vehiclePlate: "QRIL76", driver: "Carlos López Muñoz (StandLite2)", comments: "Cruce involuntario de carril detectado.", severity: "Leve" },
+    { timestamp: "21/10/25, 16:50:41", alarmType: "Conductor distraído", vehiclePlate: "YHLE15", driver: "Juan Pérez Silva (StandLite2)", comments: "Conductor mirando hacia abajo por más de 3 segundos.", severity: "Moderado" },
+    { timestamp: "21/10/25, 18:15:55", alarmType: "Distancia de Seguridad", vehiclePlate: "MPGJ87", driver: "María González Rodríguez (StandLite2)", comments: "Distancia de seguimiento demasiado corta.", severity: "Crítico" },
+    { timestamp: "22/10/25, 08:30:08", alarmType: "Conductor distraído", vehiclePlate: "QRIL76", driver: "Carlos López Muñoz (StandLite2)", comments: "Detección de distracción visual prolongada.", severity: "Leve" },
+    { timestamp: "22/10/25, 09:45:22", alarmType: "Cruce de carril", vehiclePlate: "YHLE15", driver: "Juan Pérez Silva (StandLite2)", comments: "Cambio de carril sin señalizar debidamente.", severity: "Moderado" },
+    { timestamp: "22/10/25, 11:10:35", alarmType: "Infracción de señal de stop", vehiclePlate: "MPGJ87", driver: "María González Rodríguez (StandLite2)", comments: "Paso semaforizado sin detención completa.", severity: "Grave" },
+    { timestamp: "22/10/25, 14:35:48", alarmType: "Conductor distraído", vehiclePlate: "QRIL76", driver: "Carlos López Muñoz (StandLite2)", comments: "Conductor no mantiene atención en la carretera.", severity: "Moderado" },
+    { timestamp: "22/10/25, 16:20:12", alarmType: "Teléfono Móvil", vehiclePlate: "YHLE15", driver: "Juan Pérez Silva (StandLite2)", comments: "Detección de teléfono en mano durante conducción.", severity: "Grave" },
+    { timestamp: "22/10/25, 17:45:25", alarmType: "Cruce de carril", vehiclePlate: "MPGJ87", driver: "María González Rodríguez (StandLite2)", comments: "Vehículo cruzando línea continua de carril.", severity: "Leve" },
+    { timestamp: "22/10/25, 19:10:38", alarmType: "Conductor distraído", vehiclePlate: "QRIL76", driver: "Carlos López Muñoz (StandLite2)", comments: "Posible uso de dispositivo móvil detectado.", severity: "Moderado" },
+    { timestamp: "23/10/25, 07:25:51", alarmType: "Cinturón de seguridad", vehiclePlate: "YHLE15", driver: "Juan Pérez Silva (StandLite2)", comments: "Cinturón de seguridad no abrochado al iniciar viaje.", severity: "Grave" },
+    { timestamp: "23/10/25, 09:40:14", alarmType: "Conductor distraído", vehiclePlate: "MPGJ87", driver: "María González Rodríguez (StandLite2)", comments: "Detección de distracción visual prolongada.", severity: "Leve" },
+    { timestamp: "23/10/25, 11:55:27", alarmType: "Cruce de carril", vehiclePlate: "QRIL76", driver: "Carlos López Muñoz (StandLite2)", comments: "Maniobra de cambio de carril peligrosa detectada.", severity: "Moderado" },
+    { timestamp: "23/10/25, 14:20:43", alarmType: "Teléfono Móvil", vehiclePlate: "YHLE15", driver: "Juan Pérez Silva (StandLite2)", comments: "Uso de celular prohibido detectado por cámara.", severity: "Grave" },
+    { timestamp: "23/10/25, 16:35:56", alarmType: "Conductor distraído", vehiclePlate: "MPGJ87", driver: "María González Rodríguez (StandLite2)", comments: "Conductor mirando hacia abajo por más de 3 segundos.", severity: "Moderado" },
+    { timestamp: "23/10/25, 18:50:09", alarmType: "Fatiga", vehiclePlate: "QRIL76", driver: "Carlos López Muñoz (StandLite2)", comments: "Bostezos frecuentes y somnolencia detectada.", severity: "Crítico" },
+    { timestamp: "24/10/25, 08:15:22", alarmType: "Conductor distraído", vehiclePlate: "YHLE15", driver: "Juan Pérez Silva (StandLite2)", comments: "Detección de distracción visual prolongada.", severity: "Leve" },
+    { timestamp: "24/10/25, 10:30:35", alarmType: "Cruce de carril", vehiclePlate: "MPGJ87", driver: "María González Rodríguez (StandLite2)", comments: "Cruce involuntario de carril detectado.", severity: "Moderado" },
+    { timestamp: "24/10/25, 12:45:48", alarmType: "Infracción de señal de stop", vehiclePlate: "QRIL76", driver: "Carlos López Muñoz (StandLite2)", comments: "Detención parcial en señal de stop.", severity: "Grave" },
+    { timestamp: "24/10/25, 15:10:01", alarmType: "Conductor distraído", vehiclePlate: "YHLE15", driver: "Juan Pérez Silva (StandLite2)", comments: "Conductor no mantiene atención en la carretera.", severity: "Moderado" },
+    { timestamp: "24/10/25, 17:25:14", alarmType: "Cinturón de seguridad", vehiclePlate: "MPGJ87", driver: "María González Rodríguez (StandLite2)", comments: "Detección de cinturón desabrochado en movimiento.", severity: "Grave" },
+    { timestamp: "24/10/25, 19:40:27", alarmType: "Cruce de carril", vehiclePlate: "QRIL76", driver: "Carlos López Muñoz (StandLite2)", comments: "Cambio de carril sin señalizar debidamente.", severity: "Leve" },
+    { timestamp: "25/10/25, 07:55:40", alarmType: "Conductor distraído", vehiclePlate: "YHLE15", driver: "Juan Pérez Silva (StandLite2)", comments: "Posible uso de dispositivo móvil detectado.", severity: "Moderado" },
+    { timestamp: "25/10/25, 10:10:53", alarmType: "Teléfono Móvil", vehiclePlate: "MPGJ87", driver: "María González Rodríguez (StandLite2)", comments: "Conductor manipulando dispositivo electrónico.", severity: "Grave" },
+    { timestamp: "25/10/25, 12:25:06", alarmType: "Conductor distraído", vehiclePlate: "QRIL76", driver: "Carlos López Muñoz (StandLite2)", comments: "Detección de distracción visual prolongada.", severity: "Leve" },
+    { timestamp: "25/10/25, 14:40:19", alarmType: "Cruce de carril", vehiclePlate: "YHLE15", driver: "Juan Pérez Silva (StandLite2)", comments: "Vehículo cruzando línea continua de carril.", severity: "Moderado" },
+    { timestamp: "25/10/25, 16:55:32", alarmType: "Conductor distraído", vehiclePlate: "MPGJ87", driver: "María González Rodríguez (StandLite2)", comments: "Conductor mirando hacia abajo por más de 3 segundos.", severity: "Moderado" },
+    { timestamp: "25/10/25, 19:10:45", alarmType: "Infracción de señal de stop", vehiclePlate: "QRIL76", driver: "Carlos López Muñoz (StandLite2)", comments: "Infracción de señal de alto detectada.", severity: "Grave" },
+    { timestamp: "26/10/25, 08:25:58", alarmType: "Conductor distraído", vehiclePlate: "YHLE15", driver: "Juan Pérez Silva (StandLite2)", comments: "Detección de distracción visual prolongada.", severity: "Leve" },
+    { timestamp: "26/10/25, 09:40:11", alarmType: "Cruce de carril", vehiclePlate: "MPGJ87", driver: "María González Rodríguez (StandLite2)", comments: "Maniobra de cambio de carril peligrosa detectada.", severity: "Moderado" },
+    { timestamp: "26/10/25, 11:55:24", alarmType: "Conductor distraído", vehiclePlate: "QRIL76", driver: "Carlos López Muñoz (StandLite2)", comments: "Conductor no mantiene atención en la carretera.", severity: "Moderado" },
+    { timestamp: "26/10/25, 14:10:37", alarmType: "Teléfono Móvil", vehiclePlate: "YHLE15", driver: "Juan Pérez Silva (StandLite2)", comments: "Uso de teléfono móvil mientras conduce detectado.", severity: "Grave" },
+    { timestamp: "26/10/25, 17:25:50", alarmType: "Cruce de carril", vehiclePlate: "MPGJ87", driver: "María González Rodríguez (StandLite2)", comments: "Cruce involuntario de carril detectado.", severity: "Leve" },
+    { timestamp: "26/10/25, 19:40:03", alarmType: "Conductor distraído", vehiclePlate: "QRIL76", driver: "Carlos López Muñoz (StandLite2)", comments: "Posible uso de dispositivo móvil detectado.", severity: "Moderado" }
+  ],
+  charts: {
+    alarmTypeDistribution: {
+      labels: ["Conductor distraído", "Cruce de carril", "Cinturón de seguridad", "Infracción de señal de stop", "Fatiga", "Teléfono Móvil", "Distancia de Seguridad"],
+      data: [20, 12, 6, 4, 2, 5, 1],
+      backgroundColor: ["#ffa724ff", "#7c14a5ff", "#b71c1c", "#424242", "#42b4b8ff", "#2e7400ff", "#0d47a1"]
+    },
+    dailyEvolution: {
+      labels: ["20/10", "21/10", "22/10", "23/10", "24/10", "25/10", "26/10"],
+      data: [5, 6, 7, 6, 6, 6, 4]
+    },
+    hourlyDistribution: {
+      labels: ["00:00", "01:00", "02:00", "03:00", "04:00", "05:00", "06:00", "07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00", "21:00", "22:00", "23:00"],
+      data: [0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 3, 4, 0, 0, 4, 3, 4, 3, 4, 4, 0, 0, 0, 0]
+    }
+  },
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+  status: "processed",
+  operation: "upsert"
+};
+
+// Función para inyectar datos en Redux
+function injectTestData() {
+  // Intentar diferentes formas de acceder al store
+  let store = null;
+  
+  // Método 1: Buscar en el objeto window
+  if (window.__REDUX_STORE__) {
+    store = window.__REDUX_STORE__;
+  } else {
+    // Método 2: Buscar en el DOM
+    const reactRoot = document.querySelector('#root');
+    if (reactRoot && reactRoot._reactRootContainer && reactRoot._reactRootContainer._internalRoot) {
+      const fiber = reactRoot._reactRootContainer._internalRoot.current;
+      if (fiber && fiber.child && fiber.child.stateNode && fiber.child.stateNode.store) {
+        store = fiber.child.stateNode.store;
+      }
+    }
+  }
+  
+  if (!store) {
+    console.error('No se encontró el store de Redux. Intenta recargar la página y ejecutar el código nuevamente.');
+    return;
+  }
+  
+  // Despachar la acción para establecer el reporte actual
+  store.dispatch({
+    type: 'excel/uploadExcel/fulfilled',
+    payload: testData
+  });
+  
+  console.log('✅ Datos de prueba inyectados exitosamente');
+  console.log('📊 Ahora puedes navegar a la página de Rankings: http://localhost:3006/rankings');
+  console.log('🔍 En Rankings, verifica que se muestren los 3 rankings correctamente');
+  console.log('📄 Luego haz clic en "Exportar PDF" para probar la generación');
+}
+
+// Ejecutar la inyección
+injectTestData();
+        `;
+
+        // Mostrar el código en la página
+        document.getElementById('injectionCode').textContent = injectionCode;
+
+        function openApp() {
+            window.open('http://localhost:3006', '_blank');
+        }
+
+        function copyInjectionCode() {
+            const codeElement = document.getElementById('injectionCode');
+            const textArea = document.createElement('textarea');
+            textArea.value = codeElement.textContent;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            
+            const statusElement = document.getElementById('copyStatus');
+            statusElement.innerHTML = '<span class="success">✅ Código copiado al portapapeles</span>';
+            setTimeout(() => {
+                statusElement.innerHTML = '';
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

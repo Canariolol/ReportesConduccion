@@ -137,10 +137,15 @@ class GeneradorDatosAlarma:
     
     def generar_patente(self) -> str:
         """
-        Genera una patente ficticia en formato ABCD12 (4 letras seguidas de 2 números)
+        Genera una patente ficticia en formato ABCD12 (4 letras seguidas de 2 números),
+        omitiendo las letras 'O' y los números '0'.
         """
-        letras = ''.join(random.choices(string.ascii_uppercase, k=4))
-        numeros = ''.join(random.choices(string.digits, k=2))
+        letras_permitidas = ''.join(c for c in string.ascii_uppercase if c != 'O')
+        numeros_permitidos = ''.join(c for c in string.digits if c != '0')
+
+        letras = ''.join(random.choices(letras_permitidas, k=4))
+        numeros = ''.join(random.choices(numeros_permitidos, k=2))
+    
         return f"{letras}{numeros}"
     
     def generar_patentes(self, cantidad: int) -> List[str]:

@@ -2,6 +2,11 @@ import jsPDF from 'jspdf';
 import { captureRankingAsImage } from '../components/Dashboard/ExportUtils';
 import { formatSantiagoDateTime, formatSantiagoTimestampForFile } from './export';
 
+// CONFIGURACIÓN DE ZOOM PARA RANKINGS
+// Modifica este valor para ajustar el zoom de las imágenes de los rankings en el PDF
+// Valores recomendados: 1.0 (tamaño original), 1.3 (zoom moderado), 1.5 (zoom alto)
+const RANKING_ZOOM_FACTOR = 1.8;
+
 // Función optimizada para exportar rankings a PDF con un ranking por página
 export const exportRankingsToPDFOptimized = async (
   rankingsData: any,
@@ -25,10 +30,10 @@ export const exportRankingsToPDFOptimized = async (
   try {
     console.log('Iniciando generación de PDF de rankings optimizado...');
     
-    // Crear un nuevo documento PDF
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
+    // Crear un nuevo documento PDF con orientación horizontal para todas las páginas
+    const pdf = new jsPDF('l', 'mm', 'a4');
+    let pageWidth = pdf.internal.pageSize.getWidth();
+    let pageHeight = pdf.internal.pageSize.getHeight();
     
     // Configurar colores y estilos
     const primaryColor = '#1565C0';
@@ -65,21 +70,21 @@ export const exportRankingsToPDFOptimized = async (
       });
     };
     
-    // Función para agregar el encabezado
-    const addHeader = () => {
+    // Función para agregar la página de introducción
+    const addIntroductionPage = () => {
       // Título principal centrado
-      pdf.setFontSize(22);
+      pdf.setFontSize(24);
       pdf.setTextColor(primaryColor);
-      pdf.text('Rankings de Eventos de Conducción', pageWidth / 2, 25, { align: 'center' });
+      pdf.text('Rankings de Eventos de Conducción', pageWidth / 2, 30, { align: 'center' });
       
       // Salto de línea y alinear a la izquierda la información
-      pdf.setFontSize(12);
+      pdf.setFontSize(14);
       pdf.setTextColor(100);
-      const infoX = 20;
-      let infoY = 40;
+      const infoX = 30;
+      let infoY = 50;
       
       pdf.text(`Empresa: ${companyName || 'N/A'}`, infoX, infoY);
-      infoY += 8;
+      infoY += 10;
       
       // Calcular cantidad de vehículos únicos
       const uniqueVehicles = new Set([
@@ -87,14 +92,38 @@ export const exportRankingsToPDFOptimized = async (
         ...rankingsData.bestPerformers.map((item: any) => item.name)
       ]).size;
       pdf.text(`Cantidad de Vehículos: ${uniqueVehicles}`, infoX, infoY);
-      infoY += 8;
+      infoY += 10;
       
       pdf.text(`Archivo fuente: ${fileName}`, infoX, infoY);
-      infoY += 8;
+      infoY += 10;
       
       pdf.text(`Fecha: ${formatSantiagoDateTime(new Date())}`, infoX, infoY);
+      infoY += 20;
       
-      return infoY + 10; // Devolver la posición Y después del encabezado
+      // Texto de introducción
+      pdf.setFontSize(16);
+      pdf.setTextColor(primaryColor);
+      pdf.text('Los rankings se mostrarán en las siguientes hojas:', infoX, infoY);
+      infoY += 15;
+      
+      pdf.setFontSize(14);
+      pdf.setTextColor(50);
+      const bulletX = infoX + 8;
+      
+      pdf.text('• Camiones o Conductores con más eventos', bulletX, infoY);
+      infoY += 12;
+      
+      pdf.text('• Todos los Eventos por Tipo', bulletX, infoY);
+      infoY += 12;
+      
+      pdf.text('• Camiones o Conductores con menos eventos', bulletX, infoY);
+      
+      // Agregar una nota adicional en la parte inferior derecha
+      pdf.setFontSize(12);
+      pdf.setTextColor(150);
+      pdf.text('Reporte generado automáticamente', pageWidth - 40, pageHeight - 30);
+      
+      return infoY + 20; // Devolver la posición Y después del contenido
     };
     
     // Función para agregar el pie de página
@@ -117,30 +146,18 @@ export const exportRankingsToPDFOptimized = async (
       pdf.text('Generado por Sistema de Análisis de Alarmas', 15, footerY + 5);
     };
     
-    // Función para agregar rankings como imágenes distribuidas en dos páginas
-    const addRankingsAsImages = async (headerEndY: number) => {
-      const firstRankingTop = headerEndY + 12; // Ubicar justo debajo del bloque de información
-      // Aumentar dimensiones de dibujo en PDF
-      const firstRankingWidth = Math.min(190, pageWidth - 10); // Más grande
-      const secondPageTop = 25;
-      const bottomMargin = 25;
-      const spacing = 12;
-      // Aumentado drásticamente para ocupar casi todo el ancho de la página A4
-      const secondaryTargetWidth = Math.min(200, pageWidth - 10); // Casi todo el ancho con márgenes mínimos
-      
+    // Función para agregar rankings como imágenes en páginas horizontales separadas
+    const addRankingsAsImages = async () => {
       console.log('Capturando rankings como imágenes...');
-      console.log(`Dimensiones de página: ${pageWidth}mm x ${pageHeight}mm`);
-      console.log(`Ancho primer ranking: ${firstRankingWidth}mm`);
-      console.log(`Ancho rankings secundarios: ${secondaryTargetWidth}mm`);
       
-      // Aumentado drásticamente el scale y maxWidth para máxima nitidez y calidad
-      console.log('🔍 INICIANDO CAPTURA DE RANKINGS CON PARÁMETROS:');
-      console.log('  - Scale: 8');
-      console.log('  - MaxWidth: 2400px');
+      // Configuración optimizada para captura
+      console.log('🔍 INICIANDO CAPTURA DE RANKINGS CON PARÁMETROS OPTIMIZADOS:');
+      console.log('  - Scale: 2');
+      console.log('  - MaxWidth: 1200px');
       
       const topAlarmsResult = topAlarmsRef?.current ? await captureRankingAsImage(topAlarmsRef, 'top-alarms', {
-        scale: 8, // Aumentado de 4 a 8 para el doble de nitidez
-        maxWidth: 2400 // Aumentado de 1200 a 2400 para el doble de detalle
+        scale: 2, // Reducido para optimizar tamaño
+        maxWidth: 1200 // Reducido para optimizar tamaño
       }) : { imageData: '', width: 0, height: 0 };
       
       console.log('📊 RESULTADO CAPTURA TOP ALARMAS:');
@@ -149,8 +166,8 @@ export const exportRankingsToPDFOptimized = async (
       console.log(`  - imageData vacío: ${topAlarmsResult.imageData === ''}`);
       
       const allAlarmsResult = allAlarmsRef?.current ? await captureRankingAsImage(allAlarmsRef, 'all-alarms', {
-        scale: 8, // Aumentado de 4 a 8 para el doble de nitidez
-        maxWidth: 2400 // Aumentado de 1200 a 2400 para el doble de detalle
+        scale: 2, // Reducido para optimizar tamaño
+        maxWidth: 1200 // Reducido para optimizar tamaño
       }) : { imageData: '', width: 0, height: 0 };
       
       console.log('📊 RESULTADO CAPTURA ALL ALARMS:');
@@ -159,8 +176,8 @@ export const exportRankingsToPDFOptimized = async (
       console.log(`  - imageData vacío: ${allAlarmsResult.imageData === ''}`);
       
       const bestPerformersResult = bestPerformersRef?.current ? await captureRankingAsImage(bestPerformersRef, 'best-performers', {
-        scale: 8, // Aumentado de 4 a 8 para el doble de nitidez
-        maxWidth: 2400 // Aumentado de 1200 a 2400 para el doble de detalle
+        scale: 2, // Reducido para optimizar tamaño
+        maxWidth: 1200 // Reducido para optimizar tamaño
       }) : { imageData: '', width: 0, height: 0 };
       
       console.log('📊 RESULTADO CAPTURA BEST PERFORMERS:');
@@ -168,126 +185,91 @@ export const exportRankingsToPDFOptimized = async (
       console.log(`  - Tamaño imageData: ${bestPerformersResult.imageData.length} caracteres`);
       console.log(`  - imageData vacío: ${bestPerformersResult.imageData === ''}`);
       
-      // Primera página: ranking principal (Top alarmas)
-      if (topAlarmsResult.imageData) {
-        const aspectRatio = topAlarmsResult.height / topAlarmsResult.width || 1;
-        let drawWidth = firstRankingWidth;
-        let drawHeight = drawWidth * aspectRatio;
-        const maxHeight = pageHeight - bottomMargin - firstRankingTop;
-        
-        if (drawHeight > maxHeight) {
-          drawHeight = maxHeight;
-          drawWidth = drawHeight / aspectRatio;
-        }
-        
-        const drawX = (pageWidth - drawWidth) / 2;
-        
-        console.log(`Agregando ranking principal con dimensiones: ${drawWidth}x${drawHeight}`);
-        
-        pdf.addImage(
-          topAlarmsResult.imageData,
-          'PNG',
-          drawX,
-          firstRankingTop,
-          drawWidth,
-          drawHeight
-        );
-      } else {
-        pdf.setFontSize(12);
-        pdf.setTextColor(150);
-        pdf.text(
-          'No se pudo capturar la imagen del ranking principal',
-          pageWidth / 2,
-          firstRankingTop + 10,
-          { align: 'center' }
-        );
-        console.error('No se pudo capturar la imagen para el ranking principal');
-      }
-      
-      // Segunda página: rankings secundarios
-      const secondaryRankings = [
+      // Array con todos los rankings para procesar
+      const rankings = [
         {
-          label: 'Todas las Alarmas por Tipo',
+          label: `Top 10 ${countByMode === 'truck' ? 'Camiones' : 'Conductores'} con Más Eventos`,
+          result: topAlarmsResult
+        },
+        {
+          label: 'Todos los Eventos por Tipo',
           result: allAlarmsResult
         },
         {
-          label: `Top 10 ${countByMode === 'truck' ? 'Camiones' : 'Conductores'} con Menos Alarmas`,
+          label: `Top 10 ${countByMode === 'truck' ? 'Camiones' : 'Conductores'} con Menos Eventos`,
           result: bestPerformersResult
         }
       ];
       
-      const hasSecondaryContent = secondaryRankings.some(r => r.result.imageData);
-      
-      if (hasSecondaryContent) {
-        pdf.addPage();
-        let currentY = secondPageTop;
-        const availableHeight = pageHeight - bottomMargin - currentY;
-        
-        const visibleRankings = secondaryRankings.filter(r => r.result.imageData);
-        const initialHeights = visibleRankings.map(r => {
-          const ratio = r.result.height / r.result.width || 1;
-          return secondaryTargetWidth * ratio;
-        });
-        
-        const totalSpacing = Math.max(visibleRankings.length - 1, 0) * spacing;
-        const totalHeight = initialHeights.reduce((sum, h) => sum + h, 0);
-        let scaleFactor = 1;
-        if (visibleRankings.length > 0) {
-          const availableForImages = Math.max(availableHeight - totalSpacing, 20);
-          if (totalHeight > 0) {
-            scaleFactor = Math.min(1, availableForImages / totalHeight);
-          }
-        }
-        
-        secondaryRankings.forEach((ranking, index) => {
-          if (!ranking.result.imageData) {
-            pdf.setFontSize(12);
-            pdf.setTextColor(150);
-            pdf.text(
-              `No se pudo capturar ${ranking.label}`,
-              pageWidth / 2,
-              currentY + 10,
-              { align: 'center' }
-            );
-            currentY += spacing;
-            console.error(`No se pudo capturar la imagen para: ${ranking.label}`);
-            return;
-          }
+      // Procesar cada ranking en una página horizontal separada
+      for (const ranking of rankings) {
+        if (ranking.result.imageData) {
+          // Agregar nueva página (ya está en orientación horizontal)
+          pdf.addPage();
+          
+          // Actualizar dimensiones para página horizontal
+          pageWidth = pdf.internal.pageSize.getWidth();
+          pageHeight = pdf.internal.pageSize.getHeight();
+          
+          console.log(`Nueva página horizontal: ${pageWidth}mm x ${pageHeight}mm`);
+          
+          // Configurar márgenes y dimensiones para el ranking
+          const margin = 20;
+          const headerHeight = 20;
+          const footerHeight = 15;
+          const availableWidth = pageWidth - (margin * 2);
+          const availableHeight = pageHeight - headerHeight - footerHeight - margin;
+          
+          // Aplicar zoom y centrar (valor configurado en RANKING_ZOOM_FACTOR)
+          const zoomFactor = RANKING_ZOOM_FACTOR;
+          const maxDrawWidth = Math.min(availableWidth * zoomFactor, availableWidth);
+          const maxDrawHeight = availableHeight * zoomFactor;
           
           const aspectRatio = ranking.result.height / ranking.result.width || 1;
-          let drawWidth = secondaryTargetWidth * scaleFactor;
+          let drawWidth = maxDrawWidth;
           let drawHeight = drawWidth * aspectRatio;
           
-          const remainingHeight = pageHeight - bottomMargin - currentY;
-          if (drawHeight > remainingHeight) {
-            drawHeight = remainingHeight;
+          // Ajustar si excede el alto disponible
+          if (drawHeight > maxDrawHeight) {
+            drawHeight = maxDrawHeight;
             drawWidth = drawHeight / aspectRatio;
           }
           
+          // Centrar en la página
           const drawX = (pageWidth - drawWidth) / 2;
+          const drawY = headerHeight + margin;
           
-          console.log(`Agregando ranking secundario con dimensiones: ${drawWidth}x${drawHeight}`);
+          // Agregar título del ranking
+          pdf.setFontSize(16);
+          pdf.setTextColor(primaryColor);
+          pdf.text(ranking.label, pageWidth / 2, 15, { align: 'center' });
           
+          console.log(`Agregando ranking "${ranking.label}" con dimensiones: ${drawWidth}x${drawHeight}`);
+          console.log(`Posición: x=${drawX}, y=${drawY}`);
+          
+          // Agregar la imagen del ranking
           pdf.addImage(
             ranking.result.imageData,
             'PNG',
             drawX,
-            currentY,
+            drawY,
             drawWidth,
             drawHeight
           );
-          
-          currentY += drawHeight + spacing;
-        });
+        } else {
+          console.error(`No se pudo capturar la imagen para: ${ranking.label}`);
+        }
       }
     };
     
     // Generar el PDF
     console.log('Generando PDF de rankings optimizado...');
-    const headerEndY = addHeader();
     
-    // Agregar rankings como imágenes
-    await addRankingsAsImages(headerEndY);
+    // Agregar página de introducción
+    addIntroductionPage();
+    
+    // Agregar rankings como imágenes en páginas horizontales separadas
+    await addRankingsAsImages();
     
     // Agregar marca de agua a todas las páginas
     await addWatermark();
