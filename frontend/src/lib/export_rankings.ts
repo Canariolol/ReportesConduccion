@@ -5,7 +5,12 @@ import { formatSantiagoDateTime, formatSantiagoTimestampForFile } from './export
 // CONFIGURACIÓN DE ZOOM PARA RANKINGS
 // Modifica este valor para ajustar el zoom de las imágenes de los rankings en el PDF
 // Valores recomendados: 1.0 (tamaño original), 1.3 (zoom moderado), 1.5 (zoom alto)
-const RANKING_ZOOM_FACTOR = 1.8;
+const RANKING_ZOOM_FACTOR = 0.12;
+
+// CONFIGURACIÓN DE CAPTURA PARA RANKINGS
+// Estos valores determinan el tamaño base de la captura antes de aplicar el zoom
+const CAPTURE_SCALE = 2; // Calidad de la captura (mayor = más calidad pero más pesado)
+// const CAPTURE_MAX_WIDTH = 600; // Ancho máximo de la captura en píxeles (reducido para permitir zoom) - COMENTADO PARA PERMITIR ZOOM COMPLETO
 
 // Función optimizada para exportar rankings a PDF con un ranking por página
 export const exportRankingsToPDFOptimized = async (
@@ -30,8 +35,8 @@ export const exportRankingsToPDFOptimized = async (
   try {
     console.log('Iniciando generación de PDF de rankings optimizado...');
     
-    // Crear un nuevo documento PDF con orientación horizontal para todas las páginas
-    const pdf = new jsPDF('l', 'mm', 'a4');
+    // Crear un nuevo documento PDF con orientación vertical para todas las páginas
+    const pdf = new jsPDF('p', 'mm', 'a4');
     let pageWidth = pdf.internal.pageSize.getWidth();
     let pageHeight = pdf.internal.pageSize.getHeight();
     
@@ -80,7 +85,7 @@ export const exportRankingsToPDFOptimized = async (
       // Salto de línea y alinear a la izquierda la información
       pdf.setFontSize(14);
       pdf.setTextColor(100);
-      const infoX = 30;
+      const infoX = 15;
       let infoY = 50;
       
       pdf.text(`Empresa: ${companyName || 'N/A'}`, infoX, infoY);
@@ -118,10 +123,10 @@ export const exportRankingsToPDFOptimized = async (
       
       pdf.text('• Camiones o Conductores con menos eventos', bulletX, infoY);
       
-      // Agregar una nota adicional en la parte inferior derecha
+      /* Agregar una nota adicional en la parte inferior derecha
       pdf.setFontSize(12);
       pdf.setTextColor(150);
-      pdf.text('Reporte generado automáticamente', pageWidth - 40, pageHeight - 30);
+      pdf.text('Reporte generado automáticamente', pageWidth - 40, pageHeight - 30);*/
       
       return infoY + 20; // Devolver la posición Y después del contenido
     };
@@ -156,8 +161,8 @@ export const exportRankingsToPDFOptimized = async (
       console.log('  - MaxWidth: 1200px');
       
       const topAlarmsResult = topAlarmsRef?.current ? await captureRankingAsImage(topAlarmsRef, 'top-alarms', {
-        scale: 2, // Reducido para optimizar tamaño
-        maxWidth: 1200 // Reducido para optimizar tamaño
+        scale: CAPTURE_SCALE,
+        // maxWidth: CAPTURE_MAX_WIDTH // COMENTADO PARA PERMITIR ZOOM COMPLETO SIN LÍMITES DE ANCHO
       }) : { imageData: '', width: 0, height: 0 };
       
       console.log('📊 RESULTADO CAPTURA TOP ALARMAS:');
@@ -166,8 +171,8 @@ export const exportRankingsToPDFOptimized = async (
       console.log(`  - imageData vacío: ${topAlarmsResult.imageData === ''}`);
       
       const allAlarmsResult = allAlarmsRef?.current ? await captureRankingAsImage(allAlarmsRef, 'all-alarms', {
-        scale: 2, // Reducido para optimizar tamaño
-        maxWidth: 1200 // Reducido para optimizar tamaño
+        scale: CAPTURE_SCALE,
+        // maxWidth: CAPTURE_MAX_WIDTH // COMENTADO PARA PERMITIR ZOOM COMPLETO SIN LÍMITES DE ANCHO
       }) : { imageData: '', width: 0, height: 0 };
       
       console.log('📊 RESULTADO CAPTURA ALL ALARMS:');
@@ -176,8 +181,8 @@ export const exportRankingsToPDFOptimized = async (
       console.log(`  - imageData vacío: ${allAlarmsResult.imageData === ''}`);
       
       const bestPerformersResult = bestPerformersRef?.current ? await captureRankingAsImage(bestPerformersRef, 'best-performers', {
-        scale: 2, // Reducido para optimizar tamaño
-        maxWidth: 1200 // Reducido para optimizar tamaño
+        scale: CAPTURE_SCALE,
+        // maxWidth: CAPTURE_MAX_WIDTH // COMENTADO PARA PERMITIR ZOOM COMPLETO SIN LÍMITES DE ANCHO
       }) : { imageData: '', width: 0, height: 0 };
       
       console.log('📊 RESULTADO CAPTURA BEST PERFORMERS:');
@@ -204,8 +209,8 @@ export const exportRankingsToPDFOptimized = async (
       // Procesar cada ranking en una página horizontal separada
       for (const ranking of rankings) {
         if (ranking.result.imageData) {
-          // Agregar nueva página (ya está en orientación horizontal)
-          pdf.addPage();
+          // Agregar nueva página con orientación vertical para los rankings
+          pdf.addPage('p');
           
           // Actualizar dimensiones para página horizontal
           pageWidth = pdf.internal.pageSize.getWidth();
@@ -214,26 +219,69 @@ export const exportRankingsToPDFOptimized = async (
           console.log(`Nueva página horizontal: ${pageWidth}mm x ${pageHeight}mm`);
           
           // Configurar márgenes y dimensiones para el ranking
-          const margin = 20;
+          // const margin = 20; // COMENTADO PARA REDUCIR MÁRGENES Y PERMITIR MÁS ESPACIO PARA ZOOM
+          const margin = 5; // REDUCIDO MÁRGEN PARA PERMITIR MÁS ESPACIO
           const headerHeight = 20;
           const footerHeight = 15;
-          const availableWidth = pageWidth - (margin * 2);
-          const availableHeight = pageHeight - headerHeight - footerHeight - margin;
+          // const availableWidth = pageWidth - (margin * 2); // COMENTADO PARA PERMITIR MÁS ANCHO
+          const availableWidth = pageWidth - 10; // REDUCIDO MÁRGEN TOTAL PARA PERMITIR MÁS ANCHO
+          // const availableHeight = pageHeight - headerHeight - footerHeight - margin; // COMENTADO PARA PERMITIR MÁS ALTO
+          const availableHeight = pageHeight - headerHeight - footerHeight - 5; // REDUCIDO MÁRGEN INFERIOR PARA PERMITIR MÁS ALTO
           
-          // Aplicar zoom y centrar (valor configurado en RANKING_ZOOM_FACTOR)
-          const zoomFactor = RANKING_ZOOM_FACTOR;
-          const maxDrawWidth = Math.min(availableWidth * zoomFactor, availableWidth);
-          const maxDrawHeight = availableHeight * zoomFactor;
-          
+          // Calcular dimensiones base sin zoom
           const aspectRatio = ranking.result.height / ranking.result.width || 1;
-          let drawWidth = maxDrawWidth;
+          
+          console.log(`🔍 ANÁLISIS DE ZOOM PARA "${ranking.label}":`);
+          console.log(`  - Dimensiones originales de la imagen: ${ranking.result.width}x${ranking.result.height}`);
+          console.log(`  - Aspect ratio: ${aspectRatio}`);
+          console.log(`  - Dimensiones disponibles en página: ${availableWidth}x${availableHeight}`);
+          
+          // NUEVO ENFOQUE: Calcular dimensiones base para que el zoom quepa en la página
+          const zoomFactor = RANKING_ZOOM_FACTOR;
+          console.log(`  - Factor de zoom configurado: ${zoomFactor}`);
+          
+          // Calcular el tamaño máximo que puede tener la imagen DESPUÉS de aplicar el zoom
+          // let maxBaseWidth = availableWidth / zoomFactor; // COMENTADO PARA ELIMINAR LÍMITE DE ANCHO BASE
+          // let maxBaseHeight = availableHeight / zoomFactor; // COMENTADO PARA ELIMINAR LÍMITE DE ALTO BASE
+          
+          // console.log(`  - Dimensiones máximas base (antes de zoom): ${maxBaseWidth.toFixed(2)}x${maxBaseHeight.toFixed(2)}`);
+          
+          // Calcular dimensiones base respetando el aspect ratio y los límites máximos
+          // let baseWidth = Math.min(maxBaseWidth, ranking.result.width); // COMENTADO PARA ELIMINAR LÍMITE Math.min()
+          let baseWidth = ranking.result.width; // USAR ANCHO ORIGINAL SIN LÍMITES
+          let baseHeight = baseWidth * aspectRatio;
+          
+          // Ajustar si excede el alto máximo base
+          // if (baseHeight > maxBaseHeight) { // COMENTADO PARA ELIMINAR LÍMITE DE ALTO BASE
+          //   baseHeight = maxBaseHeight;
+          //   baseWidth = baseHeight / aspectRatio;
+          // }
+          
+          console.log(`  - Dimensiones base calculadas: ${baseWidth.toFixed(2)}x${baseHeight.toFixed(2)}`);
+          
+          // Aplicar zoom - ahora debería caber en la página
+          let drawWidth = baseWidth * zoomFactor;
           let drawHeight = drawWidth * aspectRatio;
           
-          // Ajustar si excede el alto disponible
-          if (drawHeight > maxDrawHeight) {
-            drawHeight = maxDrawHeight;
-            drawWidth = drawHeight / aspectRatio;
-          }
+          console.log(`  - Dimensiones con zoom aplicado: ${drawWidth.toFixed(2)}x${drawHeight.toFixed(2)}`);
+          console.log(`  - ¿Cabe en la página? ${drawWidth <= availableWidth && drawHeight <= availableHeight ? 'SÍ ✅' : 'NO ❌'}`);
+          
+          // Verificación final de seguridad (no debería ser necesario con el cálculo anterior)
+          // COMENTADAS LAS VERIFICACIONES FINALES PARA PERMITIR QUE EL ZOOM EXCEDA LOS LÍMITES DE LA PÁGINA
+          // if (drawWidth > availableWidth) {
+          //   console.warn(`⚠️ Ajuste por ancho no esperado: ${drawWidth} > ${availableWidth}`);
+          //   drawWidth = availableWidth;
+          //   drawHeight = drawWidth * aspectRatio;
+          // }
+          
+          // if (drawHeight > availableHeight) {
+          //   console.warn(`⚠️ Ajuste por alto no esperado: ${drawHeight} > ${availableHeight}`);
+          //   drawHeight = availableHeight;
+          //   drawWidth = drawHeight / aspectRatio;
+          // }
+          
+          console.log(`  - Dimensiones finales para dibujar: ${drawWidth.toFixed(2)}x${drawHeight.toFixed(2)}`);
+          console.log(`  - Zoom efectivo aplicado: ${(drawWidth / baseWidth).toFixed(2)}x`);
           
           // Centrar en la página
           const drawX = (pageWidth - drawWidth) / 2;

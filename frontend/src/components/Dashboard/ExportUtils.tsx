@@ -387,19 +387,21 @@ export const captureRankingAsImage = async (
     
     // Configuración optimizada para capturar rankings
     const scale = options?.scale ?? 2 // Reducido de 8 a 2 para optimizar tamaño y legibilidad
-    const maxWidth = options?.maxWidth || 1200 // Reducido de 2400 a 1200 para optimizar tamaño
+    // const maxWidth = options?.maxWidth || 1200 // COMENTADO PARA PERMITIR ZOOM COMPLETO SIN LÍMITES DE ANCHO
 
     const aspectRatio = originalHeight / originalWidth
     
-    let targetWidth = Math.min(originalWidth, maxWidth)
+    // let targetWidth = Math.min(originalWidth, maxWidth) // COMENTADO PARA ELIMINAR LÍMITE Math.min()
+    let targetWidth = originalWidth // USAR ANCHO ORIGINAL SIN LÍMITES
     let targetHeight = targetWidth * aspectRatio
     
-    console.log(`Iniciando captura de ranking ${fileName} con html2canvas...`)
-    console.log(`Dimensiones originales: ${originalWidth}x${originalHeight}`)
-    console.log(`Dimensiones objetivo: ${targetWidth}x${targetHeight}`)
-    console.log(`Scale configurado: ${scale}`)
-    console.log(`MaxWidth configurado: ${maxWidth}`)
-    console.log(`Dimensiones esperadas del canvas (después de scale): ${targetWidth * scale}x${targetHeight * scale}`)
+    console.log(`🔍 ANÁLISIS DE CAPTURA CON HTML2CANVAS PARA "${fileName}":`)
+    console.log(`  - Dimensiones originales del elemento: ${originalWidth}x${originalHeight}`)
+    console.log(`  - Scale configurado en html2canvas: ${scale}`)
+    // console.log(`  - MaxWidth configurado: ${maxWidth}`) // COMENTADO PARA ELIMINAR REFERENCIA A VARIABLE COMENTADA
+    console.log(`  - Dimensiones objetivo antes de scale: ${targetWidth}x${targetHeight}`)
+    console.log(`  - Dimensiones esperadas del canvas (después de scale): ${targetWidth * scale}x${targetHeight * scale}`)
+    console.log(`  - ¿El scale afectará el tamaño final? SÍ, el canvas será ${scale}x más grande`)
     
     // Verificar dimensiones del elemento clonado antes de la captura
     const clonedRect = clonedElement.getBoundingClientRect()
@@ -426,38 +428,32 @@ export const captureRankingAsImage = async (
     console.log(`Dimensiones esperadas vs reales - Esperado: ${targetWidth * scale}x${targetHeight * scale}, Real: ${canvas.width}x${canvas.height}`)
     
     // Verificar si hay diferencia entre las dimensiones esperadas y las reales
-    if (Math.abs(canvas.width - targetWidth * scale) > 5 || Math.abs(canvas.height - targetHeight * scale) > 5) {
+    const expectedWidth = targetWidth * scale
+    const expectedHeight = targetHeight * scale
+    const widthDiff = Math.abs(canvas.width - expectedWidth)
+    const heightDiff = Math.abs(canvas.height - expectedHeight)
+    
+    console.log(`📊 ANÁLISIS DE DIMENSIONES REALES vs ESPERADAS:`)
+    console.log(`  - Ancho esperado: ${expectedWidth}, Real: ${canvas.width}, Diferencia: ${widthDiff}`)
+    console.log(`  - Alto esperado: ${expectedHeight}, Real: ${canvas.height}, Diferencia: ${heightDiff}`)
+    console.log(`  - ¿El canvas tiene las dimensiones esperadas? ${widthDiff <= 5 && heightDiff <= 5 ? 'SÍ' : 'NO'}`)
+    
+    if (widthDiff > 5 || heightDiff > 5) {
       console.warn(`⚠️ DIFERENCIA SIGNIFICATIVA EN DIMENSIONES para ${fileName}:`)
-      console.warn(`  - Esperado: ${targetWidth * scale}x${targetHeight * scale}`)
+      console.warn(`  - Esperado: ${expectedWidth}x${expectedHeight}`)
       console.warn(`  - Real: ${canvas.width}x${canvas.height}`)
-      console.warn(`  - Diferencia: ${Math.abs(canvas.width - targetWidth * scale)}x${Math.abs(canvas.height - targetHeight * scale)}`)
+      console.warn(`  - Diferencia: ${widthDiff}x${heightDiff}`)
     }
     
-    // Crear un canvas temporal para redimensionar la imagen si es necesario
-    const finalCanvas = document.createElement('canvas')
-    const finalCtx = finalCanvas.getContext('2d')
-    
-    if (!finalCtx) {
-      throw new Error('No se pudo obtener el contexto del canvas final')
-    }
-    
-    // Establecer dimensiones finales manteniendo resolución completa del canvas
-    finalCanvas.width = canvas.width  // Mantener resolución completa
-    finalCanvas.height = canvas.height
-    
-    console.log(`Dimensiones del canvas final antes de redimensionar: ${finalCanvas.width}x${finalCanvas.height}`)
-    
-    // Dibujar la imagen redimensionada
-    finalCtx.drawImage(canvas, 0, 0, finalCanvas.width, finalCanvas.height)
-    
-    const imageData = finalCanvas.toDataURL('image/png', 1.0) // Máxima calidad (aumentado de 0.95 a 1.0)
+    // Usar directamente el canvas original sin redimensionamiento
+    const imageData = canvas.toDataURL('image/png', 1.0)
     console.log(`Imagen de ranking convertida a base64 para ${fileName}. Longitud: ${imageData.length}`)
-    console.log(`Dimensiones finales retornadas: ${finalCanvas.width}x${finalCanvas.height}`)
+    console.log(`Dimensiones retornadas: ${canvas.width}x${canvas.height}`)
     
     return {
       imageData,
-      width: finalCanvas.width,
-      height: finalCanvas.height
+      width: canvas.width,
+      height: canvas.height
     }
   } catch (error) {
     console.error(`Error capturando ranking ${fileName}:`, error)

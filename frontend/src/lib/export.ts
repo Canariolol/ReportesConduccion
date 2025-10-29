@@ -957,28 +957,30 @@ export const exportRankingsToPDF = async (
       currentY += 15;
       
       // Configuración para el layout de 2 imágenes por fila
-      const imageWidth = 85; // Ancho de cada imagen
+      // const imageWidth = 85; // COMENTADO PARA PERMITIR ZOOM COMPLETO SIN LÍMITES DE ANCHO
+      const imageWidth = 150; // AUMENTADO PARA PERMITIR MÁS ESPACIO PARA ZOOM
       const imageSpacing = 10; // Espacio entre imágenes
       const rowSpacing = 15; // Espacio entre filas
       const leftX = 20; // Posición X para la imagen izquierda
-      const rightX = leftX + imageWidth + imageSpacing; // Posición X para la imagen derecha
+      // const rightX = leftX + imageWidth + imageSpacing; // COMENTADO PARA RECALCULAR CON NUEVO ANCHO
+      const rightX = leftX + imageWidth + imageSpacing; // Posición X para la imagen derecha con nuevo ancho
       
       // Capturar los rankings como imágenes
       console.log('Capturando rankings como imágenes...');
       
       const topAlarmsResult = topAlarmsRef?.current ? await captureRankingAsImage(topAlarmsRef, 'top-alarms', {
         scale: 3,
-        maxWidth: 900
+        // maxWidth: 900 // COMENTADO PARA PERMITIR ZOOM COMPLETO SIN LÍMITES DE ANCHO
       }) : { imageData: '', width: 0, height: 0 };
       
       const allAlarmsResult = allAlarmsRef?.current ? await captureRankingAsImage(allAlarmsRef, 'all-alarms', {
         scale: 3,
-        maxWidth: 900
+        // maxWidth: 900 // COMENTADO PARA PERMITIR ZOOM COMPLETO SIN LÍMITES DE ANCHO
       }) : { imageData: '', width: 0, height: 0 };
       
       const bestPerformersResult = bestPerformersRef?.current ? await captureRankingAsImage(bestPerformersRef, 'best-performers', {
         scale: 3,
-        maxWidth: 900
+        // maxWidth: 900 // COMENTADO PARA PERMITIR ZOOM COMPLETO SIN LÍMITES DE ANCHO
       }) : { imageData: '', width: 0, height: 0 };
       
       // Array con los resultados de captura y sus títulos
