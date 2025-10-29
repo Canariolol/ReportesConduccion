@@ -132,11 +132,21 @@ export const captureRankingAsImage = async (
     tempContainer.appendChild(clonedElement)
     document.body.appendChild(tempContainer)
 
-    // Verificar si hay imágenes SVG dentro del elemento clonado
-    const svgElements = clonedElement.querySelectorAll('img[src*=".svg"]') as NodeListOf<HTMLImageElement>
-    console.log(`Se encontraron ${svgElements.length} elementos SVG en ${fileName}:`)
-    svgElements.forEach((img, index) => {
-      console.log(`  SVG ${index + 1}: src="${img.src}", width=${img.offsetWidth}, height=${img.offsetHeight}`)
+    // Verificar si hay elementos SVG dentro del elemento clonado (tanto imágenes como SVG directos)
+    const svgImageElements = clonedElement.querySelectorAll('img[src*=".svg"]') as NodeListOf<HTMLImageElement>
+    const svgDirectElements = clonedElement.querySelectorAll('svg') as NodeListOf<SVGSVGElement>
+    
+    console.log(`Se encontraron ${svgImageElements.length} imágenes SVG y ${svgDirectElements.length} SVG directos en ${fileName}:`)
+    
+    // Procesar imágenes SVG (método antiguo)
+    svgImageElements.forEach((img, index) => {
+      console.log(`  Imagen SVG ${index + 1}: src="${img.src}", width=${img.offsetWidth}, height=${img.offsetHeight}`)
+    })
+    
+    // Procesar SVG directos (nuevo método)
+    svgDirectElements.forEach((svg, index) => {
+      const rect = svg.getBoundingClientRect()
+      console.log(`  SVG directo ${index + 1}: width=${rect.width}, height=${rect.height}`)
     })
     
     const blobToDataUrl = (blob: Blob): Promise<string> => {
@@ -147,36 +157,187 @@ export const captureRankingAsImage = async (
         reader.readAsDataURL(blob)
       })
     }
+    
+    // Función para convertir SVG a canvas usando canvg
+    const convertSvgWithCanvg = async (img: HTMLImageElement): Promise<void> => {
+      try {
+        console.log(`Intentando convertir SVG con canvg: ${img.src}`)
+        
+        // Importar canvg dinámicamente
+        const { Canvg } = await import('canvg')
+        
+        // Obtener el contenido SVG
+        const response = await fetch(img.src)
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`)
+        }
+        
+        const svgText = await response.text()
+        
+        // Crear un canvas temporal
+        const canvas = document.createElement('canvas')
+        const ctx = canvas.getContext('2d')
+        if (!ctx) {
+          throw new Error('No se pudo obtener el contexto del canvas')
+        }
+        
+        // Establecer dimensiones del canvas basadas en la imagen original
+        canvas.width = img.naturalWidth || 24
+        canvas.height = img.naturalHeight || 24
+        
+        // Renderizar el SVG en el canvas usando canvg
+        const v = Canvg.fromString(ctx, svgText)
+        await v.render()
+        
+        // Convertir el canvas a data URL
+        const dataUrl = canvas.toDataURL('image/png')
+        
+        // Reemplazar el src de la imagen con el data URL
+        img.src = dataUrl
+        img.setAttribute('data-inlined-svg', 'true')
+        
+        console.log(`SVG convertido exitosamente con canvg: ${img.src.substring(0, 50)}...`)
+      } catch (error) {
+        console.error(`Error al convertir SVG con canvg:`, error)
+        throw error
+      }
+    }
 
-    const svgConversionPromises = Array.from(svgElements).map(async (img) => {
+    // Procesar imágenes SVG (método antiguo)
+    const svgImageConversionPromises = Array.from(svgImageElements).map(async (img) => {
       if (!img.src || img.src.startsWith('data:') || img.getAttribute('data-inlined-svg') === 'true') {
         return
       }
 
       try {
-        const response = await fetch(img.src)
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`)
+        // Primero intentar con canvg
+        await convertSvgWithCanvg(img)
+      } catch (canvgError) {
+        console.warn(`Falló la conversión con canvg, intentando método tradicional:`, canvgError)
+        try {
+          // Si canvg falla, intentar con el método tradicional
+          const response = await fetch(img.src)
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`)
+          }
+
+          const blob = await response.blob()
+          const dataUrl = await blobToDataUrl(blob)
+
+          await new Promise<void>((resolve) => {
+            img.onload = () => resolve()
+            img.onerror = () => resolve()
+            img.src = dataUrl
+          })
+
+          img.onload = null
+          img.onerror = null
+
+          img.setAttribute('data-inlined-svg', 'true')
+          console.log(`SVG convertido a data URL: ${img.src.substring(0, 50)}...`)
+        } catch (traditionalError) {
+          console.error(`Ambos métodos de conversión SVG fallaron para ${img.src}:`, traditionalError)
+          
+          // Como último recurso, intentar usar una imagen PNG equivalente si existe
+          const pngSrc = img.src.replace('.svg', '.png')
+          try {
+            const response = await fetch(pngSrc)
+            if (response.ok) {
+              const blob = await response.blob()
+              const dataUrl = await blobToDataUrl(blob)
+              
+              await new Promise<void>((resolve) => {
+                img.onload = () => resolve()
+                img.onerror = () => resolve()
+                img.src = dataUrl
+              })
+              
+              img.setAttribute('data-inlined-svg', 'true')
+              console.log(`Usada imagen PNG como alternativa: ${pngSrc}`)
+            }
+          } catch (pngError) {
+            console.error(`No se pudo encontrar imagen PNG alternativa:`, pngError)
+          }
         }
-
-        const blob = await response.blob()
-        const dataUrl = await blobToDataUrl(blob)
-
-        await new Promise<void>((resolve) => {
-          img.onload = () => resolve()
-          img.onerror = () => resolve()
-          img.src = dataUrl
-        })
-
-        img.onload = null
-        img.onerror = null
-
-        img.setAttribute('data-inlined-svg', 'true')
-        console.log(`SVG convertido a data URL: ${img.src.substring(0, 50)}...`)
-      } catch (error) {
-        console.error(`No se pudo convertir el SVG ${img.src} a data URL:`, error)
       }
     })
+
+    // Procesar SVG directos (nuevo método)
+    const svgDirectConversionPromises = Array.from(svgDirectElements).map(async (svg) => {
+      if (svg.getAttribute('data-processed') === 'true') {
+        return
+      }
+
+      try {
+        // Convertir SVG directo a canvas usando canvg
+        const { Canvg } = await import('canvg')
+        
+        // Crear un canvas temporal
+        const canvas = document.createElement('canvas')
+        const ctx = canvas.getContext('2d')
+        if (!ctx) {
+          throw new Error('No se pudo obtener el contexto del canvas')
+        }
+        
+        // Obtener dimensiones del SVG
+        const svgRect = svg.getBoundingClientRect()
+        canvas.width = svgRect.width || 24
+        canvas.height = svgRect.height || 24
+        
+        // Serializar el SVG a string
+        const svgString = new XMLSerializer().serializeToString(svg)
+        
+        // Renderizar el SVG en el canvas usando canvg
+        const v = Canvg.fromString(ctx, svgString)
+        await v.render()
+        
+        // Convertir el canvas a data URL
+        const dataUrl = canvas.toDataURL('image/png')
+        
+        // Crear una imagen para reemplazar el SVG
+        const img = document.createElement('img')
+        img.src = dataUrl
+        img.width = svgRect.width || 24
+        img.height = svgRect.height || 24
+        img.setAttribute('data-inlined-svg', 'true')
+        img.style.width = `${svgRect.width || 24}px`
+        img.style.height = `${svgRect.height || 24}px`
+        
+        // Reemplazar el SVG con la imagen
+        svg.parentNode?.replaceChild(img, svg)
+        
+        console.log(`SVG directo convertido exitosamente: ${dataUrl.substring(0, 50)}...`)
+      } catch (error) {
+        console.error(`Error al convertir SVG directo:`, error)
+        
+        // Como fallback, intentar precargar el SVG como imagen
+        try {
+          const svgString = new XMLSerializer().serializeToString(svg)
+          const blob = new Blob([svgString], { type: 'image/svg+xml' })
+          const dataUrl = await blobToDataUrl(blob)
+          
+          const img = document.createElement('img')
+          img.src = dataUrl
+          img.setAttribute('data-inlined-svg', 'true')
+          
+          const svgRect = svg.getBoundingClientRect()
+          img.width = svgRect.width || 24
+          img.height = svgRect.height || 24
+          img.style.width = `${svgRect.width || 24}px`
+          img.style.height = `${svgRect.height || 24}px`
+          
+          // Reemplazar el SVG con la imagen
+          svg.parentNode?.replaceChild(img, svg)
+          
+          console.log(`SVG directo convertido usando fallback: ${dataUrl.substring(0, 50)}...`)
+        } catch (fallbackError) {
+          console.error(`Fallback para SVG directo también falló:`, fallbackError)
+        }
+      }
+    })
+
+    // Combinar todas las promesas de conversión
+    const svgConversionPromises = [...svgImageConversionPromises, ...svgDirectConversionPromises]
 
     await Promise.all(svgConversionPromises)
     
@@ -225,8 +386,8 @@ export const captureRankingAsImage = async (
     await new Promise(resolve => setTimeout(resolve, 300))
     
     // Configuración optimizada para capturar rankings
-    const scale = options?.scale ?? 3 // Mayor escala para mejor calidad
-    const maxWidth = options?.maxWidth || 600 // Mayor ancho para capturar más detalles
+    const scale = options?.scale ?? 8 // Mayor escala para máxima nitidez (aumentado de 4 a 8)
+    const maxWidth = options?.maxWidth || 2400 // Mayor ancho para capturar más detalles (aumentado de 1200 a 2400)
 
     const aspectRatio = originalHeight / originalWidth
     
@@ -236,6 +397,14 @@ export const captureRankingAsImage = async (
     console.log(`Iniciando captura de ranking ${fileName} con html2canvas...`)
     console.log(`Dimensiones originales: ${originalWidth}x${originalHeight}`)
     console.log(`Dimensiones objetivo: ${targetWidth}x${targetHeight}`)
+    console.log(`Scale configurado: ${scale}`)
+    console.log(`MaxWidth configurado: ${maxWidth}`)
+    console.log(`Dimensiones esperadas del canvas (después de scale): ${targetWidth * scale}x${targetHeight * scale}`)
+    
+    // Verificar dimensiones del elemento clonado antes de la captura
+    const clonedRect = clonedElement.getBoundingClientRect()
+    console.log(`Dimensiones del elemento clonado antes de captura: ${clonedRect.width}x${clonedRect.height}`)
+    console.log(`OffsetWidth/Height del elemento clonado: ${clonedElement.offsetWidth}x${clonedElement.offsetHeight}`)
     
     const canvas = await html2canvas(clonedElement, {
       backgroundColor: '#ffffff',
@@ -254,6 +423,15 @@ export const captureRankingAsImage = async (
     })
     
     console.log(`Captura de ranking ${fileName} completada. Dimensiones canvas: ${canvas.width}x${canvas.height}`)
+    console.log(`Dimensiones esperadas vs reales - Esperado: ${targetWidth * scale}x${targetHeight * scale}, Real: ${canvas.width}x${canvas.height}`)
+    
+    // Verificar si hay diferencia entre las dimensiones esperadas y las reales
+    if (Math.abs(canvas.width - targetWidth * scale) > 5 || Math.abs(canvas.height - targetHeight * scale) > 5) {
+      console.warn(`⚠️ DIFERENCIA SIGNIFICATIVA EN DIMENSIONES para ${fileName}:`)
+      console.warn(`  - Esperado: ${targetWidth * scale}x${targetHeight * scale}`)
+      console.warn(`  - Real: ${canvas.width}x${canvas.height}`)
+      console.warn(`  - Diferencia: ${Math.abs(canvas.width - targetWidth * scale)}x${Math.abs(canvas.height - targetHeight * scale)}`)
+    }
     
     // Crear un canvas temporal para redimensionar la imagen si es necesario
     const finalCanvas = document.createElement('canvas')
@@ -263,15 +441,18 @@ export const captureRankingAsImage = async (
       throw new Error('No se pudo obtener el contexto del canvas final')
     }
     
-    // Establecer dimensiones finales
-    finalCanvas.width = targetWidth * scale
-    finalCanvas.height = targetHeight * scale
+    // Establecer dimensiones finales manteniendo resolución completa del canvas
+    finalCanvas.width = canvas.width  // Mantener resolución completa
+    finalCanvas.height = canvas.height
+    
+    console.log(`Dimensiones del canvas final antes de redimensionar: ${finalCanvas.width}x${finalCanvas.height}`)
     
     // Dibujar la imagen redimensionada
     finalCtx.drawImage(canvas, 0, 0, finalCanvas.width, finalCanvas.height)
     
-    const imageData = finalCanvas.toDataURL('image/png', 0.95)
+    const imageData = finalCanvas.toDataURL('image/png', 1.0) // Máxima calidad (aumentado de 0.95 a 1.0)
     console.log(`Imagen de ranking convertida a base64 para ${fileName}. Longitud: ${imageData.length}`)
+    console.log(`Dimensiones finales retornadas: ${finalCanvas.width}x${finalCanvas.height}`)
     
     return {
       imageData,

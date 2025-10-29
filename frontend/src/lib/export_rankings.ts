@@ -120,28 +120,53 @@ export const exportRankingsToPDFOptimized = async (
     // Función para agregar rankings como imágenes distribuidas en dos páginas
     const addRankingsAsImages = async (headerEndY: number) => {
       const firstRankingTop = headerEndY + 12; // Ubicar justo debajo del bloque de información
-      const firstRankingWidth = Math.min(190, pageWidth - 25);
+      // Aumentar dimensiones de dibujo en PDF
+      const firstRankingWidth = Math.min(190, pageWidth - 10); // Más grande
       const secondPageTop = 25;
       const bottomMargin = 25;
       const spacing = 12;
-      const secondaryTargetWidth = Math.min(185, pageWidth - 30);
+      // Aumentado drásticamente para ocupar casi todo el ancho de la página A4
+      const secondaryTargetWidth = Math.min(200, pageWidth - 10); // Casi todo el ancho con márgenes mínimos
       
       console.log('Capturando rankings como imágenes...');
+      console.log(`Dimensiones de página: ${pageWidth}mm x ${pageHeight}mm`);
+      console.log(`Ancho primer ranking: ${firstRankingWidth}mm`);
+      console.log(`Ancho rankings secundarios: ${secondaryTargetWidth}mm`);
+      
+      // Aumentado drásticamente el scale y maxWidth para máxima nitidez y calidad
+      console.log('🔍 INICIANDO CAPTURA DE RANKINGS CON PARÁMETROS:');
+      console.log('  - Scale: 8');
+      console.log('  - MaxWidth: 2400px');
       
       const topAlarmsResult = topAlarmsRef?.current ? await captureRankingAsImage(topAlarmsRef, 'top-alarms', {
-        scale: 3,
-        maxWidth: 900
+        scale: 8, // Aumentado de 4 a 8 para el doble de nitidez
+        maxWidth: 2400 // Aumentado de 1200 a 2400 para el doble de detalle
       }) : { imageData: '', width: 0, height: 0 };
+      
+      console.log('📊 RESULTADO CAPTURA TOP ALARMAS:');
+      console.log(`  - Dimensiones: ${topAlarmsResult.width}x${topAlarmsResult.height}`);
+      console.log(`  - Tamaño imageData: ${topAlarmsResult.imageData.length} caracteres`);
+      console.log(`  - imageData vacío: ${topAlarmsResult.imageData === ''}`);
       
       const allAlarmsResult = allAlarmsRef?.current ? await captureRankingAsImage(allAlarmsRef, 'all-alarms', {
-        scale: 3,
-        maxWidth: 900
+        scale: 8, // Aumentado de 4 a 8 para el doble de nitidez
+        maxWidth: 2400 // Aumentado de 1200 a 2400 para el doble de detalle
       }) : { imageData: '', width: 0, height: 0 };
       
+      console.log('📊 RESULTADO CAPTURA ALL ALARMS:');
+      console.log(`  - Dimensiones: ${allAlarmsResult.width}x${allAlarmsResult.height}`);
+      console.log(`  - Tamaño imageData: ${allAlarmsResult.imageData.length} caracteres`);
+      console.log(`  - imageData vacío: ${allAlarmsResult.imageData === ''}`);
+      
       const bestPerformersResult = bestPerformersRef?.current ? await captureRankingAsImage(bestPerformersRef, 'best-performers', {
-        scale: 3,
-        maxWidth: 900
+        scale: 8, // Aumentado de 4 a 8 para el doble de nitidez
+        maxWidth: 2400 // Aumentado de 1200 a 2400 para el doble de detalle
       }) : { imageData: '', width: 0, height: 0 };
+      
+      console.log('📊 RESULTADO CAPTURA BEST PERFORMERS:');
+      console.log(`  - Dimensiones: ${bestPerformersResult.width}x${bestPerformersResult.height}`);
+      console.log(`  - Tamaño imageData: ${bestPerformersResult.imageData.length} caracteres`);
+      console.log(`  - imageData vacío: ${bestPerformersResult.imageData === ''}`);
       
       // Primera página: ranking principal (Top alarmas)
       if (topAlarmsResult.imageData) {

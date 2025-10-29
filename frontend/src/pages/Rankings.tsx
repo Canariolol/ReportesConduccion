@@ -108,7 +108,7 @@ const RankingTable: React.FC<{
           backgroundColor: '#ffffff',
           borderRadius: 3,
           boxShadow: '0 10px 30px rgba(21, 101, 192, 0.08)',
-          maxWidth: '1200px',
+          maxWidth: '2400px',  // O eliminar completamente
           mx: 'auto',
         }}
       >
@@ -312,7 +312,9 @@ const RankingTable: React.FC<{
                               variant="body2"
                               sx={{
                                 fontWeight: 600,
-                                color: type === 'top' ? 'error.main' : 'success.main'
+                                color: type === 'top'
+                                  ? 'error.main'
+                                  : (halfLength + index + 1 > 5 ? 'warning.main' : 'success.main')
                               }}
                             >
                               {item.percentage.toFixed(1)}%
