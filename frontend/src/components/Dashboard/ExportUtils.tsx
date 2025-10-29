@@ -139,6 +139,47 @@ export const captureRankingAsImage = async (
       console.log(`  SVG ${index + 1}: src="${img.src}", width=${img.offsetWidth}, height=${img.offsetHeight}`)
     })
     
+    const blobToDataUrl = (blob: Blob): Promise<string> => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(reader.result as string)
+        reader.onerror = reject
+        reader.readAsDataURL(blob)
+      })
+    }
+
+    const svgConversionPromises = Array.from(svgElements).map(async (img) => {
+      if (!img.src || img.src.startsWith('data:') || img.getAttribute('data-inlined-svg') === 'true') {
+        return
+      }
+
+      try {
+        const response = await fetch(img.src)
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`)
+        }
+
+        const blob = await response.blob()
+        const dataUrl = await blobToDataUrl(blob)
+
+        await new Promise<void>((resolve) => {
+          img.onload = () => resolve()
+          img.onerror = () => resolve()
+          img.src = dataUrl
+        })
+
+        img.onload = null
+        img.onerror = null
+
+        img.setAttribute('data-inlined-svg', 'true')
+        console.log(`SVG convertido a data URL: ${img.src.substring(0, 50)}...`)
+      } catch (error) {
+        console.error(`No se pudo convertir el SVG ${img.src} a data URL:`, error)
+      }
+    })
+
+    await Promise.all(svgConversionPromises)
+    
     // Forzar la carga de todas las imágenes antes de capturar
     const imagePromises = Array.from(clonedElement.querySelectorAll('img')).map(async (img) => {
       if (!img.getAttribute('crossorigin')) {
@@ -184,7 +225,7 @@ export const captureRankingAsImage = async (
     await new Promise(resolve => setTimeout(resolve, 300))
     
     // Configuración optimizada para capturar rankings
-    const scale = options?.scale || 2 // Mayor escala para mejor calidad
+    const scale = options?.scale ?? 3 // Mayor escala para mejor calidad
     const maxWidth = options?.maxWidth || 600 // Mayor ancho para capturar más detalles
 
     const aspectRatio = originalHeight / originalWidth

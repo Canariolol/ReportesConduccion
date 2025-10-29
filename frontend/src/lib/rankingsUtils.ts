@@ -20,6 +20,8 @@ export interface RankingItem {
   name: string
   count: number
   percentage?: number
+  mostRecurrentEvent?: string
+  mostRecurrentVehicle?: string
 }
 
 // Interfaz para los datos de rankings completos
@@ -42,6 +44,9 @@ export function calculateRankings(report: ProcessedReport, countBy: CountByMode 
   // Extraer y contar las alarmas por el modo seleccionado
   const alarmCounts = countAlarmsByMode(report.events, countBy)
   
+  // Obtener el evento más recurrente para cada camión/conductor
+  const mostRecurrentEvents = getMostRecurrentEvents(report.events, countBy)
+  
   // Calcular el total de alarmas para porcentajes
   const totalAlarms = Object.values(alarmCounts).reduce((sum, count) => sum + count, 0)
   
@@ -50,7 +55,8 @@ export function calculateRankings(report: ProcessedReport, countBy: CountByMode 
     id,
     name: id, // El nombre es el mismo que el ID (placa o conductor)
     count,
-    percentage: totalAlarms > 0 ? (count / totalAlarms) * 100 : 0
+    percentage: totalAlarms > 0 ? (count / totalAlarms) * 100 : 0,
+    mostRecurrentEvent: mostRecurrentEvents[id] || ''
   }))
   
   // Ordenar por cantidad de alarmas (descendente)
@@ -95,6 +101,48 @@ function countAlarmsByMode(events: ProcessedReport['events'], countBy: CountByMo
   })
   
   return counts
+}
+
+/**
+ * Determina el tipo de evento más recurrente para cada camión o conductor
+ * @param events - Array de eventos del reporte
+ * @param countBy - Modo de conteo: 'truck' para contar por camión, 'driver' para contar por conductor
+ * @returns Objeto con el tipo de evento más recurrente por camión o conductor
+ */
+function getMostRecurrentEvents(events: ProcessedReport['events'], countBy: CountByMode): Record<string, string> {
+  const eventTypesByEntity: Record<string, Record<string, number>> = {}
+  
+  events.forEach(event => {
+    // Determinar la clave según el modo de conteo
+    const key = countBy === 'truck' ? event.vehiclePlate : event.driver
+    
+    if (key && event.alarmType) {
+      // Inicializar el contador para esta entidad si no existe
+      if (!eventTypesByEntity[key]) {
+        eventTypesByEntity[key] = {}
+      }
+      
+      // Incrementar el contador para este tipo de evento
+      eventTypesByEntity[key][event.alarmType] = (eventTypesByEntity[key][event.alarmType] || 0) + 1
+    }
+  })
+  
+  // Determinar el tipo de evento más recurrente para cada entidad
+  const mostRecurrentEvents: Record<string, string> = {}
+  
+  Object.entries(eventTypesByEntity).forEach(([entity, eventTypes]) => {
+    // Encontrar el tipo de evento con mayor count
+    const sortedEventTypes = Object.entries(eventTypes)
+      .sort(([, countA], [, countB]) => countB - countA)
+    
+    if (sortedEventTypes.length > 0) {
+      // Obtener el nombre descriptivo del tipo de evento más recurrente
+      const [eventType] = sortedEventTypes[0]
+      mostRecurrentEvents[entity] = getAlarmTypeName(eventType as keyof typeof ALARM_TYPES)
+    }
+  })
+  
+  return mostRecurrentEvents
 }
 
 /**
@@ -180,9 +228,10 @@ export function calculateRankingStats(rankingItems: RankingItem[]): {
 /**
  * Calcula el ranking de tipos de alarma y sus cantidades
  * @param report - Reporte procesado con los eventos
+ * @param countBy - Modo de conteo: 'truck' para contar por camión, 'driver' para contar por conductor
  * @returns Array de RankingItem con los tipos de alarma ordenados por cantidad (descendente)
  */
-export function calculateAlarmTypesRanking(report: ProcessedReport): RankingItem[] {
+export function calculateAlarmTypesRanking(report: ProcessedReport, countBy: CountByMode = 'truck'): RankingItem[] {
   const alarmTypeCounts: Record<string, number> = {}
   
   // Contar alarmas por tipo
@@ -192,6 +241,9 @@ export function calculateAlarmTypesRanking(report: ProcessedReport): RankingItem
     }
   })
   
+  // Obtener el camión/conductor más recurrente para cada tipo de alarma
+  const mostRecurrentVehicles = getMostRecurrentVehicleByAlarmType(report.events, countBy)
+  
   // Calcular el total de alarmas para porcentajes
   const totalAlarms = Object.values(alarmTypeCounts).reduce((sum, count) => sum + count, 0)
   
@@ -200,11 +252,56 @@ export function calculateAlarmTypesRanking(report: ProcessedReport): RankingItem
     id: type,
     name: getAlarmTypeName(type as keyof typeof ALARM_TYPES),
     count,
-    percentage: totalAlarms > 0 ? (count / totalAlarms) * 100 : 0
+    percentage: totalAlarms > 0 ? (count / totalAlarms) * 100 : 0,
+    mostRecurrentVehicle: mostRecurrentVehicles[type] || ''
   }))
   
   // Ordenar por cantidad de alarmas (descendente)
   return rankingItems.sort((a, b) => b.count - a.count)
+}
+
+/**
+ * Determina el camión o conductor más recurrente para cada tipo de alarma
+ * @param events - Array de eventos del reporte
+ * @param countBy - Modo de conteo: 'truck' para contar por camión, 'driver' para contar por conductor
+ * @returns Objeto con el camión/conductor más recurrente por tipo de alarma
+ */
+function getMostRecurrentVehicleByAlarmType(events: ProcessedReport['events'], countBy: CountByMode): Record<string, string> {
+  const vehicleCountsByAlarmType: Record<string, Record<string, number>> = {}
+  
+  events.forEach(event => {
+    if (event.alarmType) {
+      // Determinar la clave según el modo de conteo
+      const key = countBy === 'truck' ? event.vehiclePlate : event.driver
+      
+      if (key) {
+        // Inicializar el contador para este tipo de alarma si no existe
+        if (!vehicleCountsByAlarmType[event.alarmType]) {
+          vehicleCountsByAlarmType[event.alarmType] = {}
+        }
+        
+        // Incrementar el contador para este camión/conductor
+        vehicleCountsByAlarmType[event.alarmType][key] = (vehicleCountsByAlarmType[event.alarmType][key] || 0) + 1
+      }
+    }
+  })
+  
+  // Determinar el camión/conductor más recurrente para cada tipo de alarma
+  const mostRecurrentVehicles: Record<string, string> = {}
+  
+  Object.entries(vehicleCountsByAlarmType).forEach(([alarmType, vehicleCounts]) => {
+    // Encontrar el camión/conductor con mayor count
+    const sortedVehicles = Object.entries(vehicleCounts)
+      .sort(([, countA], [, countB]) => countB - countA)
+    
+    if (sortedVehicles.length > 0) {
+      // Obtener el camión/conductor más recurrente
+      const [vehicle] = sortedVehicles[0]
+      mostRecurrentVehicles[alarmType] = vehicle
+    }
+  })
+  
+  return mostRecurrentVehicles
 }
 
 /**

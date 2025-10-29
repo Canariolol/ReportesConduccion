@@ -70,7 +70,7 @@ export const exportRankingsToPDFOptimized = async (
       // Título principal centrado
       pdf.setFontSize(22);
       pdf.setTextColor(primaryColor);
-      pdf.text('Rankings de Alarmas de Conducción', pageWidth / 2, 25, { align: 'center' });
+      pdf.text('Rankings de Eventos de Conducción', pageWidth / 2, 25, { align: 'center' });
       
       // Salto de línea y alinear a la izquierda la información
       pdf.setFontSize(12);
@@ -117,84 +117,131 @@ export const exportRankingsToPDFOptimized = async (
       pdf.text('Generado por Sistema de Análisis de Alarmas', 15, footerY + 5);
     };
     
-    // Función para agregar rankings como imágenes (un ranking por página)
-    const addRankingsAsImages = async () => {
-      // Configuración para el layout de un ranking por página
-      const baseImageWidth = 85; // Reducido al 50% del tamaño original
-      const topMargin = 35;
-      const bottomMargin = 30;
-      const titleSpacing = 15;
+    // Función para agregar rankings como imágenes distribuidas en dos páginas
+    const addRankingsAsImages = async (headerEndY: number) => {
+      const firstRankingTop = headerEndY + 12; // Ubicar justo debajo del bloque de información
+      const firstRankingWidth = Math.min(190, pageWidth - 25);
+      const secondPageTop = 25;
+      const bottomMargin = 25;
+      const spacing = 12;
+      const secondaryTargetWidth = Math.min(185, pageWidth - 30);
       
-      // Capturar los rankings como imágenes con opciones optimizadas
       console.log('Capturando rankings como imágenes...');
       
       const topAlarmsResult = topAlarmsRef?.current ? await captureRankingAsImage(topAlarmsRef, 'top-alarms', {
-        scale: 2, // Mayor escala para mejor calidad
-        maxWidth: 600 // Mayor ancho para capturar más detalles
+        scale: 3,
+        maxWidth: 900
       }) : { imageData: '', width: 0, height: 0 };
       
       const allAlarmsResult = allAlarmsRef?.current ? await captureRankingAsImage(allAlarmsRef, 'all-alarms', {
-        scale: 2,
-        maxWidth: 600
+        scale: 3,
+        maxWidth: 900
       }) : { imageData: '', width: 0, height: 0 };
       
       const bestPerformersResult = bestPerformersRef?.current ? await captureRankingAsImage(bestPerformersRef, 'best-performers', {
-        scale: 2,
-        maxWidth: 600
+        scale: 3,
+        maxWidth: 900
       }) : { imageData: '', width: 0, height: 0 };
       
-      // Array con los resultados de captura y sus títulos
-      const rankings = [
+      // Primera página: ranking principal (Top alarmas)
+      if (topAlarmsResult.imageData) {
+        const aspectRatio = topAlarmsResult.height / topAlarmsResult.width || 1;
+        let drawWidth = firstRankingWidth;
+        let drawHeight = drawWidth * aspectRatio;
+        const maxHeight = pageHeight - bottomMargin - firstRankingTop;
+        
+        if (drawHeight > maxHeight) {
+          drawHeight = maxHeight;
+          drawWidth = drawHeight / aspectRatio;
+        }
+        
+        const drawX = (pageWidth - drawWidth) / 2;
+        
+        console.log(`Agregando ranking principal con dimensiones: ${drawWidth}x${drawHeight}`);
+        
+        pdf.addImage(
+          topAlarmsResult.imageData,
+          'PNG',
+          drawX,
+          firstRankingTop,
+          drawWidth,
+          drawHeight
+        );
+      } else {
+        pdf.setFontSize(12);
+        pdf.setTextColor(150);
+        pdf.text(
+          'No se pudo capturar la imagen del ranking principal',
+          pageWidth / 2,
+          firstRankingTop + 10,
+          { align: 'center' }
+        );
+        console.error('No se pudo capturar la imagen para el ranking principal');
+      }
+      
+      // Segunda página: rankings secundarios
+      const secondaryRankings = [
         {
-          title: `Top 10 ${countByMode === 'truck' ? 'Camiones' : 'Conductores'} con Más Alarmas`,
-          result: topAlarmsResult
-        },
-        {
-          title: 'Todas las Alarmas por Tipo',
+          label: 'Todas las Alarmas por Tipo',
           result: allAlarmsResult
         },
         {
-          title: `Top 10 ${countByMode === 'truck' ? 'Camiones' : 'Conductores'} con Menos Alarmas`,
+          label: `Top 10 ${countByMode === 'truck' ? 'Camiones' : 'Conductores'} con Menos Alarmas`,
           result: bestPerformersResult
         }
       ];
       
-      // Agregar cada ranking en su propia página
-      for (let i = 0; i < rankings.length; i++) {
-        const ranking = rankings[i];
+      const hasSecondaryContent = secondaryRankings.some(r => r.result.imageData);
+      
+      if (hasSecondaryContent) {
+        pdf.addPage();
+        let currentY = secondPageTop;
+        const availableHeight = pageHeight - bottomMargin - currentY;
         
-        // Si no es el primer ranking, agregar nueva página
-        if (i > 0) {
-          pdf.addPage();
+        const visibleRankings = secondaryRankings.filter(r => r.result.imageData);
+        const initialHeights = visibleRankings.map(r => {
+          const ratio = r.result.height / r.result.width || 1;
+          return secondaryTargetWidth * ratio;
+        });
+        
+        const totalSpacing = Math.max(visibleRankings.length - 1, 0) * spacing;
+        const totalHeight = initialHeights.reduce((sum, h) => sum + h, 0);
+        let scaleFactor = 1;
+        if (visibleRankings.length > 0) {
+          const availableForImages = Math.max(availableHeight - totalSpacing, 20);
+          if (totalHeight > 0) {
+            scaleFactor = Math.min(1, availableForImages / totalHeight);
+          }
         }
         
-        let currentY = topMargin;
-        
-        // Agregar subtítulo centrado
-        pdf.setFontSize(16);
-        pdf.setTextColor(primaryColor);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(ranking.title, pageWidth / 2, currentY, { align: 'center' });
-        pdf.setFont('helvetica', 'normal');
-        
-        currentY += titleSpacing;
-        
-        // Agregar la imagen si se capturó correctamente
-        if (ranking.result.imageData) {
-          // Calcular altura manteniendo la proporción
-          const aspectRatio = ranking.result.height / ranking.result.width;
-          let drawWidth = baseImageWidth;
+        secondaryRankings.forEach((ranking, index) => {
+          if (!ranking.result.imageData) {
+            pdf.setFontSize(12);
+            pdf.setTextColor(150);
+            pdf.text(
+              `No se pudo capturar ${ranking.label}`,
+              pageWidth / 2,
+              currentY + 10,
+              { align: 'center' }
+            );
+            currentY += spacing;
+            console.error(`No se pudo capturar la imagen para: ${ranking.label}`);
+            return;
+          }
+          
+          const aspectRatio = ranking.result.height / ranking.result.width || 1;
+          let drawWidth = secondaryTargetWidth * scaleFactor;
           let drawHeight = drawWidth * aspectRatio;
-          const maxImageHeight = pageHeight - bottomMargin - currentY;
-
-          if (drawHeight > maxImageHeight) {
-            drawHeight = maxImageHeight;
+          
+          const remainingHeight = pageHeight - bottomMargin - currentY;
+          if (drawHeight > remainingHeight) {
+            drawHeight = remainingHeight;
             drawWidth = drawHeight / aspectRatio;
           }
-
+          
           const drawX = (pageWidth - drawWidth) / 2;
-
-          console.log(`Agregando ranking ${ranking.title} con dimensiones: ${drawWidth}x${drawHeight}`);
+          
+          console.log(`Agregando ranking secundario con dimensiones: ${drawWidth}x${drawHeight}`);
           
           pdf.addImage(
             ranking.result.imageData,
@@ -204,13 +251,9 @@ export const exportRankingsToPDFOptimized = async (
             drawWidth,
             drawHeight
           );
-        } else {
-          // Si no se pudo capturar la imagen, mostrar un mensaje
-          pdf.setFontSize(12);
-          pdf.setTextColor(150);
-          pdf.text('No se pudo capturar la imagen del ranking', pageWidth / 2, 50, { align: 'center' });
-          console.error(`No se pudo capturar la imagen para: ${ranking.title}`);
-        }
+          
+          currentY += drawHeight + spacing;
+        });
       }
     };
     
@@ -219,7 +262,7 @@ export const exportRankingsToPDFOptimized = async (
     const headerEndY = addHeader();
     
     // Agregar rankings como imágenes
-    await addRankingsAsImages();
+    await addRankingsAsImages(headerEndY);
     
     // Agregar marca de agua a todas las páginas
     await addWatermark();

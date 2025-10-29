@@ -967,18 +967,18 @@ export const exportRankingsToPDF = async (
       console.log('Capturando rankings como imágenes...');
       
       const topAlarmsResult = topAlarmsRef?.current ? await captureRankingAsImage(topAlarmsRef, 'top-alarms', {
-        scale: 1.5,
-        maxWidth: 400
+        scale: 3,
+        maxWidth: 900
       }) : { imageData: '', width: 0, height: 0 };
       
       const allAlarmsResult = allAlarmsRef?.current ? await captureRankingAsImage(allAlarmsRef, 'all-alarms', {
-        scale: 1.5,
-        maxWidth: 400
+        scale: 3,
+        maxWidth: 900
       }) : { imageData: '', width: 0, height: 0 };
       
       const bestPerformersResult = bestPerformersRef?.current ? await captureRankingAsImage(bestPerformersRef, 'best-performers', {
-        scale: 1.5,
-        maxWidth: 400
+        scale: 3,
+        maxWidth: 900
       }) : { imageData: '', width: 0, height: 0 };
       
       // Array con los resultados de captura y sus títulos

@@ -120,10 +120,10 @@ const RankingTable: React.FC<{
                 <TableRow>
                   <TableCell sx={{ fontWeight: 600 }}>Posición</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>
-                    {isAlarmTypes ? 'Tipo de Alarma' : (countBy === 'truck' ? 'Camión' : 'Conductor')}
+                    {isAlarmTypes ? 'Tipo de Evento' : (countBy === 'truck' ? 'Camión' : 'Conductor')}
                   </TableCell>
                   <TableCell sx={{ fontWeight: 600 }} align="right">
-                    Total de Alarmas
+                    Total de Eventos
                   </TableCell>
                   {data[0]?.percentage && (
                     <TableCell sx={{ fontWeight: 600 }} align="right">
@@ -151,7 +151,33 @@ const RankingTable: React.FC<{
                       </Box>
                     </TableCell>
                     <TableCell sx={{ fontWeight: 600, color: 'primary.main' }}>
-                      {item.name}
+                      <Box>
+                        {item.name}
+                        {!isAlarmTypes && item.mostRecurrentEvent && (
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              display: 'block',
+                              color: type === 'best' ? 'warning.main' : 'error.main',
+                              fontSize: '0.75rem'
+                            }}
+                          >
+                            (Evento más recurrente: {item.mostRecurrentEvent})
+                          </Typography>
+                        )}
+                        {isAlarmTypes && item.mostRecurrentVehicle && (
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              display: 'block',
+                              color: 'error.main',
+                              fontSize: '0.75rem'
+                            }}
+                          >
+                            ({countBy === 'truck' ? 'Camión más recurrente' : 'Conductor más recurrente'}: {item.mostRecurrentVehicle})
+                          </Typography>
+                        )}
+                      </Box>
                     </TableCell>
                     <TableCell align="right" sx={{ fontWeight: 600 }}>
                       {item.count}
@@ -205,14 +231,14 @@ const Rankings: React.FC = () => {
     return calculateRankings(currentReport, countBy)
   }, [currentReport, countBy])
 
-  // Calcular el ranking de tipos de alarma (independiente del toggle)
+  // Calcular el ranking de tipos de alarma (dependiente del toggle)
   const alarmTypesRanking = useMemo(() => {
     if (!currentReport) {
       return []
     }
     
-    return calculateAlarmTypesRanking(currentReport)
-  }, [currentReport])
+    return calculateAlarmTypesRanking(currentReport, countBy)
+  }, [currentReport, countBy])
 
   const handleCountByChange = (
     event: React.MouseEvent<HTMLElement>,
@@ -268,7 +294,7 @@ const Rankings: React.FC = () => {
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'transparent' }}>
       <Header 
-        title="📊 Rankings de Alarmas"
+        title="📊 Rankings de Eventos"
         subtitle="West Ingeniería - Análisis de Rendimiento"
       />
 
@@ -354,7 +380,7 @@ const Rankings: React.FC = () => {
             {/* Top 10 con Más Alarmas */}
             <Grid item xs={12} lg={4}>
               <RankingTable
-                title={`Top 10 ${countBy === 'truck' ? 'Camiones' : 'Conductores'} con Más Alarmas`}
+                title={`Top 10 ${countBy === 'truck' ? 'Camiones' : 'Conductores'} con Más Eventos`}
                 data={rankingsData.topAlarms}
                 icon={<TrendingUp color="error" />}
                 type="top"
@@ -367,7 +393,7 @@ const Rankings: React.FC = () => {
             {/* Todas las Alarmas por Tipo */}
             <Grid item xs={12} lg={4}>
               <RankingTable
-                title="Todas las Alarmas por Tipo"
+                title="Todos los Eventos por Tipo"
                 data={alarmTypesRanking}
                 icon={<Assessment color="primary" />}
                 type="top"
@@ -381,7 +407,7 @@ const Rankings: React.FC = () => {
             {/* Top 10 con Menos Alarmas */}
             <Grid item xs={12} lg={4}>
               <RankingTable
-                title={`Top 10 ${countBy === 'truck' ? 'Camiones' : 'Conductores'} con Menos Alarmas`}
+                title={`Top 10 ${countBy === 'truck' ? 'Camiones' : 'Conductores'} con Menos Eventos`}
                 data={rankingsData.bestPerformers}
                 icon={<TrendingDown color="success" />}
                 type="best"
