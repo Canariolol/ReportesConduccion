@@ -81,26 +81,112 @@ export const captureRankingAsImage = async (
   console.log(`Referencia recibida:`, ref)
   console.log(`Referencia actual:`, ref?.current)
   
-  if (!ref?.current) {
+  const element = ref?.current
+
+  if (!element) {
     console.error(`Error: No se encontró el elemento DOM para ${fileName}`)
     return { imageData: '', width: 0, height: 0 }
   }
-  
+
+  let tempContainer: HTMLDivElement | null = null
+
   try {
     console.log(`Importando html2canvas para ranking ${fileName}...`)
     const html2canvas = (await import('html2canvas')).default
     console.log(`html2canvas importado correctamente para ranking ${fileName}`)
     
-    // Esperar un momento para asegurar que todos los estilos se apliquen
-    await new Promise(resolve => setTimeout(resolve, 100))
+    // Esperar a que las fuentes web estén listas
+    if (document.fonts && 'ready' in document.fonts) {
+      try {
+        await document.fonts.ready
+      } catch (fontError) {
+        console.warn(`No se pudo esperar la carga de fuentes para ${fileName}:`, fontError)
+      }
+    }
+
+    const rect = element.getBoundingClientRect()
+    const originalWidth = Math.max(Math.round(rect.width), element.offsetWidth)
+    const originalHeight = Math.max(Math.round(rect.height), element.offsetHeight)
+
+    if (!originalWidth || !originalHeight) {
+      throw new Error(`El elemento ${fileName} no tiene dimensiones visibles (width=${originalWidth}, height=${originalHeight})`)
+    }
+
+    // Clonar el elemento para capturarlo fuera del flujo visual
+    tempContainer = document.createElement('div')
+    tempContainer.style.position = 'fixed'
+    tempContainer.style.left = '-10000px'
+    tempContainer.style.top = '0'
+    tempContainer.style.width = `${originalWidth}px`
+    tempContainer.style.padding = '0'
+    tempContainer.style.margin = '0'
+    tempContainer.style.backgroundColor = '#ffffff'
+    tempContainer.style.zIndex = '-1'
+    tempContainer.setAttribute('data-capture-temp', fileName)
+
+    const clonedElement = element.cloneNode(true) as HTMLElement
+    clonedElement.setAttribute('data-capture-id', fileName)
+    clonedElement.style.width = `${originalWidth}px`
+    clonedElement.style.boxSizing = 'border-box'
+
+    tempContainer.appendChild(clonedElement)
+    document.body.appendChild(tempContainer)
+
+    // Verificar si hay imágenes SVG dentro del elemento clonado
+    const svgElements = clonedElement.querySelectorAll('img[src*=".svg"]') as NodeListOf<HTMLImageElement>
+    console.log(`Se encontraron ${svgElements.length} elementos SVG en ${fileName}:`)
+    svgElements.forEach((img, index) => {
+      console.log(`  SVG ${index + 1}: src="${img.src}", width=${img.offsetWidth}, height=${img.offsetHeight}`)
+    })
     
-    // Configuración optimizada para imágenes más pequeñas
-    const scale = options?.scale || 1.5 // Reducido de 2 a 1.5 para imágenes más pequeñas
-    const maxWidth = options?.maxWidth || 400 // Ancho máximo para las imágenes
+    // Forzar la carga de todas las imágenes antes de capturar
+    const imagePromises = Array.from(clonedElement.querySelectorAll('img')).map(async (img) => {
+      if (!img.getAttribute('crossorigin')) {
+        img.setAttribute('crossorigin', 'anonymous')
+      }
+      if (img.crossOrigin !== 'anonymous') {
+        img.crossOrigin = 'anonymous'
+      }
+
+      if (img.complete && img.naturalHeight !== 0) {
+        return true
+      }
+      
+      return new Promise<boolean>((resolve) => {
+        const timeout = setTimeout(() => {
+          console.warn(`Timeout esperando carga de imagen: ${img.src}`)
+          resolve(false)
+        }, 7000)
+        
+        img.onload = () => {
+          clearTimeout(timeout)
+          resolve(true)
+        }
+        
+        img.onerror = () => {
+          clearTimeout(timeout)
+          console.error(`Error cargando imagen: ${img.src}`)
+          resolve(false)
+        }
+        
+        if (!img.complete) {
+          const currentSrc = img.src
+          img.src = ''
+          img.src = currentSrc
+        }
+      })
+    })
     
-    // Calcular dimensiones optimizadas
-    const originalWidth = ref.current.offsetWidth
-    const originalHeight = ref.current.offsetHeight
+    console.log(`Esperando carga de ${imagePromises.length} imágenes para ${fileName}...`)
+    await Promise.all(imagePromises)
+    
+    // Esperar un momento adicional para asegurar que todo se renderice
+    await new Promise(resolve => setTimeout(resolve, 300))
+    
+    // Configuración optimizada para capturar rankings
+    const scale = options?.scale || 2 // Mayor escala para mejor calidad
+    const maxWidth = options?.maxWidth || 600 // Mayor ancho para capturar más detalles
+
     const aspectRatio = originalHeight / originalWidth
     
     let targetWidth = Math.min(originalWidth, maxWidth)
@@ -110,17 +196,16 @@ export const captureRankingAsImage = async (
     console.log(`Dimensiones originales: ${originalWidth}x${originalHeight}`)
     console.log(`Dimensiones objetivo: ${targetWidth}x${targetHeight}`)
     
-    const canvas = await html2canvas(ref.current, {
+    const canvas = await html2canvas(clonedElement, {
       backgroundColor: '#ffffff',
-      scale: scale, // Reducido para imágenes más pequeñas
+      scale: scale,
       useCORS: true,
-      allowTaint: true,
+      allowTaint: false,
       width: originalWidth,
       height: originalHeight,
-      logging: false, // Deshabilitar logging para reducir ruido
+      logging: true,
       // Ignorar elementos que puedan causar problemas
       ignoreElements: (element) => {
-        // Ignorar botones o elementos interactivos
         return element.tagName === 'BUTTON' ||
                element.classList.contains('MuiButton-root') ||
                element.classList.contains('MuiIconButton-root')
@@ -129,32 +214,37 @@ export const captureRankingAsImage = async (
     
     console.log(`Captura de ranking ${fileName} completada. Dimensiones canvas: ${canvas.width}x${canvas.height}`)
     
-    // Crear un canvas temporal para redimensionar la imagen
-    const resizedCanvas = document.createElement('canvas')
-    const resizedCtx = resizedCanvas.getContext('2d')
+    // Crear un canvas temporal para redimensionar la imagen si es necesario
+    const finalCanvas = document.createElement('canvas')
+    const finalCtx = finalCanvas.getContext('2d')
     
-    if (!resizedCtx) {
-      throw new Error('No se pudo obtener el contexto del canvas redimensionado')
+    if (!finalCtx) {
+      throw new Error('No se pudo obtener el contexto del canvas final')
     }
     
-    // Establecer dimensiones redimensionadas
-    resizedCanvas.width = targetWidth * scale
-    resizedCanvas.height = targetHeight * scale
+    // Establecer dimensiones finales
+    finalCanvas.width = targetWidth * scale
+    finalCanvas.height = targetHeight * scale
     
     // Dibujar la imagen redimensionada
-    resizedCtx.drawImage(canvas, 0, 0, resizedCanvas.width, resizedCanvas.height)
+    finalCtx.drawImage(canvas, 0, 0, finalCanvas.width, finalCanvas.height)
     
-    const imageData = resizedCanvas.toDataURL('image/png', 0.9) // Calidad 90% para reducir tamaño
-    console.log(`Imagen de ranking redimensionada y convertida a base64 para ${fileName}. Longitud: ${imageData.length}`)
+    const imageData = finalCanvas.toDataURL('image/png', 0.95)
+    console.log(`Imagen de ranking convertida a base64 para ${fileName}. Longitud: ${imageData.length}`)
     
     return {
       imageData,
-      width: resizedCanvas.width,
-      height: resizedCanvas.height
+      width: finalCanvas.width,
+      height: finalCanvas.height
     }
   } catch (error) {
     console.error(`Error capturando ranking ${fileName}:`, error)
     return { imageData: '', width: 0, height: 0 }
+  } finally {
+    if (tempContainer && tempContainer.parentElement) {
+      tempContainer.parentElement.removeChild(tempContainer)
+    }
+    tempContainer = null
   }
 }
 

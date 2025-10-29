@@ -21,6 +21,7 @@ import {
   Notifications as NotificationsIcon,
   Settings as SettingsIcon,
   Business as BusinessIcon,
+  BarChart as RankingsIcon,
 } from '@mui/icons-material'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth.ts'
@@ -102,6 +103,10 @@ const Navbar: React.FC = () => {
       <MenuItem onClick={() => { navigate('/reports'); handleMobileMenuClose(); }}>
         <ReportsIcon sx={{ mr: 1 }} />
         Reportes
+      </MenuItem>
+      <MenuItem onClick={() => { navigate('/rankings'); handleMobileMenuClose(); }}>
+        <RankingsIcon sx={{ mr: 1 }} />
+        Rankings
       </MenuItem>
       <MenuItem onClick={() => { navigate('/admin'); handleMobileMenuClose(); }}>
         <AdminIcon sx={{ mr: 1 }} />
@@ -191,6 +196,22 @@ const Navbar: React.FC = () => {
               }}
             >
               Reportes
+            </Button>
+            <Button
+              color="inherit"
+              startIcon={<RankingsIcon />}
+              onClick={() => navigate('/rankings')}
+              sx={{
+                mr: 1,
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 500,
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                },
+              }}
+            >
+              Rankings
             </Button>
             <Button
               color="inherit"

@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard.tsx'
 import Login from './pages/Login.tsx'
 import Reports from './pages/Reports.tsx'
 import Admin from './pages/Admin.tsx'
+import Rankings from './pages/Rankings.tsx'
 import Navbar from './components/common/Navbar.tsx'
 import { useAuth } from './hooks/useAuth.ts'
 import { AuroraBackground } from './components/ui/Backgrounds.tsx'
@@ -97,6 +98,7 @@ function App() {
             <Route path="/" element={user ? <Dashboard /> : <Navigate to="/login" />} />
             <Route path="/reports" element={user ? <Reports /> : <Navigate to="/login" />} />
             <Route path="/admin" element={user ? <Admin /> : <Navigate to="/login" />} />
+            <Route path="/rankings" element={user ? <Rankings /> : <Navigate to="/login" />} />
             <Route path="*" element={<Navigate to={user ? "/" : "/login"} />} />
           </Routes>
         </Box>

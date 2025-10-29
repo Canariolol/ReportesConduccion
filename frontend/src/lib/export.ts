@@ -63,12 +63,12 @@ const getSantiagoDateParts = (date: Date): SantiagoDateParts => {
   return parts;
 };
 
-const formatSantiagoDateTime = (date: Date): string => {
+export const formatSantiagoDateTime = (date: Date): string => {
   const parts = getSantiagoDateParts(date);
   return `${parts.day}/${parts.month}/${parts.year} ${parts.hour}:${parts.minute}`;
 };
 
-const formatSantiagoTimestampForFile = (date: Date): string => {
+export const formatSantiagoTimestampForFile = (date: Date): string => {
   const parts = getSantiagoDateParts(date);
   return `${parts.year}${parts.month}${parts.day}_${parts.hour}${parts.minute}`;
 };
@@ -966,17 +966,17 @@ export const exportRankingsToPDF = async (
       // Capturar los rankings como imágenes
       console.log('Capturando rankings como imágenes...');
       
-      const topAlarmsResult = topAlarmsRef ? await captureRankingAsImage(topAlarmsRef, 'top-alarms', {
+      const topAlarmsResult = topAlarmsRef?.current ? await captureRankingAsImage(topAlarmsRef, 'top-alarms', {
         scale: 1.5,
         maxWidth: 400
       }) : { imageData: '', width: 0, height: 0 };
       
-      const allAlarmsResult = allAlarmsRef ? await captureRankingAsImage(allAlarmsRef, 'all-alarms', {
+      const allAlarmsResult = allAlarmsRef?.current ? await captureRankingAsImage(allAlarmsRef, 'all-alarms', {
         scale: 1.5,
         maxWidth: 400
       }) : { imageData: '', width: 0, height: 0 };
       
-      const bestPerformersResult = bestPerformersRef ? await captureRankingAsImage(bestPerformersRef, 'best-performers', {
+      const bestPerformersResult = bestPerformersRef?.current ? await captureRankingAsImage(bestPerformersRef, 'best-performers', {
         scale: 1.5,
         maxWidth: 400
       }) : { imageData: '', width: 0, height: 0 };

@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import { Box, Button, FormControl, InputLabel, Select, MenuItem, Typography } from '@mui/material'
-import { GetApp, PictureAsPdf, Save, Business, Refresh, BarChart } from '@mui/icons-material'
-import RankingsModal from './RankingsModal'
+import { GetApp, PictureAsPdf, Save, Business, Refresh } from '@mui/icons-material'
 import { ProcessedReport } from '../../services/excel'
 
 interface ExportButtonsProps {
@@ -25,7 +24,6 @@ const ExportButtons: React.FC<ExportButtonsProps> = ({
   onCompanyChange,
   currentReport
 }) => {
-  const [showRankingsModal, setShowRankingsModal] = useState(false)
   return (
     <Box sx={{ 
       mb: 4, 
@@ -88,23 +86,6 @@ const ExportButtons: React.FC<ExportButtonsProps> = ({
 
         {/* Botones de Exportación */}
         <Box sx={{ display: 'flex', gap: 2, ml: 'auto' }}>
-          <Button
-            variant="contained"
-            startIcon={<BarChart />}
-            onClick={() => setShowRankingsModal(true)}
-            sx={{
-              background: 'linear-gradient(135deg, #4caf50 0%, #8bc34a 100%)',
-              fontWeight: 600,
-              px: 3,
-              py: 1.5,
-              '&:hover': {
-                transform: 'translateY(-2px)',
-                boxShadow: '0 6px 20px rgba(76, 175, 80, 0.4)',
-              }
-            }}
-          >
-            Rankings
-          </Button>
           <Button
             variant="contained"
             startIcon={<GetApp />}
@@ -208,13 +189,6 @@ const ExportButtons: React.FC<ExportButtonsProps> = ({
           </Typography>
         </Box>
       )}
-      
-      {/* Modal de Rankings */}
-      <RankingsModal
-        open={showRankingsModal}
-        onClose={() => setShowRankingsModal(false)}
-        currentReport={currentReport}
-      />
     </Box>
   )
 }
