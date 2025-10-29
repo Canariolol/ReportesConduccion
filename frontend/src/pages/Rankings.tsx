@@ -88,23 +88,28 @@ const RankingTable: React.FC<{
   tableRef: React.RefObject<HTMLDivElement>
   captureId: string
 }> = ({ title, data, icon, type, countBy, isAlarmTypes = false, tableRef, captureId }) => {
+  // Dividir los datos en dos columnas
+  const halfLength = Math.ceil(data.length / 2);
+  const leftColumnData = data.slice(0, halfLength);
+  const rightColumnData = data.slice(halfLength);
+  
   return (
     <Box
       ref={tableRef}
       data-capture-id={captureId}
       sx={{
         mb: 3,
-        height: '100%',
         position: 'relative',
       }}
     >
       <Card
         elevation={3}
         sx={{
-          height: '100%',
           backgroundColor: '#ffffff',
           borderRadius: 3,
           boxShadow: '0 10px 30px rgba(21, 101, 192, 0.08)',
+          maxWidth: '1200px',
+          mx: 'auto',
         }}
       >
         <CardContent>
@@ -114,92 +119,213 @@ const RankingTable: React.FC<{
               {title}
             </Typography>
           </Box>
-          <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 600 }}>Posición</TableCell>
-                  <TableCell sx={{ fontWeight: 600 }}>
-                    {isAlarmTypes ? 'Tipo de Evento' : (countBy === 'truck' ? 'Camión' : 'Conductor')}
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 600 }} align="right">
-                    Total de Eventos
-                  </TableCell>
-                  {data[0]?.percentage && (
-                    <TableCell sx={{ fontWeight: 600 }} align="right">
-                      Porcentaje
-                    </TableCell>
-                  )}
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {data.map((item, index) => (
-                  <TableRow 
-                    key={item.id} 
-                    sx={{ 
-                      '&:hover': { bgcolor: 'rgba(0,0,0,0.02)' },
-                      '&:first-of-type td': { 
-                        borderTop: type === 'top' ? '2px solid #f44336' : '2px solid #4caf50',
-                        fontWeight: 700
-                      }
-                    }}
-                  >
-                    <TableCell sx={{ fontWeight: 600 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <PositionIcon position={index + 1} type={type} />
-                        #{index + 1}
-                      </Box>
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 600, color: 'primary.main' }}>
-                      <Box>
-                        {item.name}
-                        {!isAlarmTypes && item.mostRecurrentEvent && (
-                          <Typography
-                            variant="caption"
-                            sx={{
-                              display: 'block',
-                              color: type === 'best' ? 'warning.main' : 'error.main',
-                              fontSize: '0.75rem'
-                            }}
-                          >
-                            (Evento más recurrente: {item.mostRecurrentEvent})
-                          </Typography>
-                        )}
-                        {isAlarmTypes && item.mostRecurrentVehicle && (
-                          <Typography
-                            variant="caption"
-                            sx={{
-                              display: 'block',
-                              color: 'error.main',
-                              fontSize: '0.75rem'
-                            }}
-                          >
-                            ({countBy === 'truck' ? 'Camión más recurrente' : 'Conductor más recurrente'}: {item.mostRecurrentVehicle})
-                          </Typography>
-                        )}
-                      </Box>
-                    </TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 600 }}>
-                      {item.count}
-                    </TableCell>
-                    {item.percentage && (
-                      <TableCell align="right">
-                        <Typography 
-                          variant="body2" 
-                          sx={{ 
-                            fontWeight: 600,
-                            color: type === 'top' ? 'error.main' : 'success.main'
-                          }}
-                        >
-                          {item.percentage.toFixed(1)}%
-                        </Typography>
+          
+          {/* Contenedor con dos columnas */}
+          <Box sx={{ display: 'flex', gap: 0.5 }}>
+            {/* Columna izquierda */}
+            <Box sx={{ flex: 1 }}>
+              <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 600, py: 0.75, px: 0.75, width: '15%' }}>Posición</TableCell>
+                      <TableCell sx={{ fontWeight: 600, py: 0.75, px: 0.75, width: '30%' }}>
+                        {isAlarmTypes ? 'Tipo de Evento' : (countBy === 'truck' ? 'Camión' : 'Conductor')}
                       </TableCell>
-                    )}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                      <TableCell sx={{ fontWeight: 600, py: 0.75, px: 0.75, width: '25%' }} align="right">
+                        Total de Eventos
+                      </TableCell>
+                      {data[0]?.percentage && (
+                        <TableCell sx={{ fontWeight: 600, py: 0.75, px: 0.75, width: '30%' }} align="right">
+                          Porcentaje
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {leftColumnData.map((item, index) => (
+                      <TableRow
+                        key={item.id}
+                        sx={{
+                          '&:hover': { bgcolor: 'rgba(0,0,0,0.02)' },
+                          '&:first-of-type td': {
+                            borderTop: type === 'top' ? '2px solid #f44336' : '2px solid #4caf50',
+                            fontWeight: 700
+                          }
+                        }}
+                      >
+                        <TableCell sx={{ fontWeight: 600, py: 0.5, px: 0.75 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <PositionIcon position={index + 1} type={type} />
+                            #{index + 1}
+                          </Box>
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: 600, color: 'primary.main', py: 0.5, px: 0.75 }}>
+                          <Box sx={{
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            maxWidth: '250px'
+                          }}>
+                            {item.name}
+                            {!isAlarmTypes && item.mostRecurrentEvent && (
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  display: 'block',
+                                  color: type === 'best' ? 'warning.main' : 'error.main',
+                                  fontSize: '0.75rem',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap'
+                                }}
+                              >
+                                (Evento más recurrente: {item.mostRecurrentEvent})
+                              </Typography>
+                            )}
+                            {isAlarmTypes && item.mostRecurrentVehicle && (
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  display: 'block',
+                                  color: 'error.main',
+                                  fontSize: '0.75rem',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                  maxWidth: '250px'
+                                }}
+                              >
+                                ({countBy === 'truck' ? 'Camión más recurrente' : 'Conductor más recurrente'}: {item.mostRecurrentVehicle})
+                              </Typography>
+                            )}
+                          </Box>
+                        </TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 600, py: 0.5, px: 0.75 }}>
+                          {item.count}
+                        </TableCell>
+                        {item.percentage && (
+                          <TableCell align="right" sx={{ py: 0.5, px: 0.75 }}>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                fontWeight: 600,
+                                color: type === 'top' ? 'error.main' : 'success.main'
+                              }}
+                            >
+                              {item.percentage.toFixed(1)}%
+                            </Typography>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+            
+            {/* Columna derecha */}
+            <Box sx={{ flex: 1 }}>
+              <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 600, py: 0.75, px: 0.75, width: '15%' }}>Posición</TableCell>
+                      <TableCell sx={{ fontWeight: 600, py: 0.75, px: 0.75, width: '30%' }}>
+                        {isAlarmTypes ? 'Tipo de Evento' : (countBy === 'truck' ? 'Camión' : 'Conductor')}
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 600, py: 0.75, px: 0.75, width: '25%' }} align="right">
+                        Total de Eventos
+                      </TableCell>
+                      {data[0]?.percentage && (
+                        <TableCell sx={{ fontWeight: 600, py: 0.75, px: 0.75, width: '30%' }} align="right">
+                          Porcentaje
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {rightColumnData.map((item, index) => (
+                      <TableRow
+                        key={item.id}
+                        sx={{
+                          '&:hover': { bgcolor: 'rgba(0,0,0,0.02)' },
+                          '&:first-of-type td': {
+                            borderTop: type === 'top' ? '2px solid #f44336' : '2px solid #4caf50',
+                            fontWeight: 600
+                          }
+                        }}
+                      >
+                        <TableCell sx={{ fontWeight: 600, py: 0.5, px: 0.75 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <PositionIcon position={halfLength + index + 1} type={type} />
+                            #{halfLength + index + 1}
+                          </Box>
+                        </TableCell>
+                        <TableCell sx={{ fontWeight: 600, color: 'primary.main', py: 0.5, px: 0.75 }}>
+                          <Box sx={{
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            maxWidth: '250px'
+                          }}>
+                            {item.name}
+                            {!isAlarmTypes && item.mostRecurrentEvent && (
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  display: 'block',
+                                  color: type === 'best' ? 'warning.main' : 'error.main',
+                                  fontSize: '0.75rem',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                (Evento más recurrente: {item.mostRecurrentEvent})
+                              </Typography>
+                            )}
+                            {isAlarmTypes && item.mostRecurrentVehicle && (
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  display: 'block',
+                                  color: 'error.main',
+                                  fontSize: '0.75rem',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                  maxWidth: '250px'
+                                }}
+                              >
+                                ({countBy === 'truck' ? 'Camión más recurrente' : 'Conductor más recurrente'}: {item.mostRecurrentVehicle})
+                              </Typography>
+                            )}
+                          </Box>
+                        </TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 600, py: 0.5, px: 0.75 }}>
+                          {item.count}
+                        </TableCell>
+                        {item.percentage && (
+                          <TableCell align="right" sx={{ py: 0.5, px: 0.75 }}>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                fontWeight: 600,
+                                color: type === 'top' ? 'error.main' : 'success.main'
+                              }}
+                            >
+                              {item.percentage.toFixed(1)}%
+                            </Typography>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          </Box>
         </CardContent>
       </Card>
     </Box>
@@ -376,47 +502,41 @@ const Rankings: React.FC = () => {
             </Alert>
           </Box>
         ) : (
-          <Grid container spacing={3}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
             {/* Top 10 con Más Alarmas */}
-            <Grid item xs={12} lg={4}>
-              <RankingTable
-                title={`Top 10 ${countBy === 'truck' ? 'Camiones' : 'Conductores'} con Más Eventos`}
-                data={rankingsData.topAlarms}
-                icon={<TrendingUp color="error" />}
-                type="top"
-                countBy={countBy}
-                tableRef={topAlarmsRef}
-                captureId="top-alarms"
-              />
-            </Grid>
+            <RankingTable
+              title={`Top 10 ${countBy === 'truck' ? 'Camiones' : 'Conductores'} con Más Eventos`}
+              data={rankingsData.topAlarms}
+              icon={<TrendingUp color="error" />}
+              type="top"
+              countBy={countBy}
+              tableRef={topAlarmsRef}
+              captureId="top-alarms"
+            />
             
             {/* Todas las Alarmas por Tipo */}
-            <Grid item xs={12} lg={4}>
-              <RankingTable
-                title="Todos los Eventos por Tipo"
-                data={alarmTypesRanking}
-                icon={<Assessment color="primary" />}
-                type="top"
-                countBy={countBy}
-                isAlarmTypes={true}
-                tableRef={allAlarmsRef}
-                captureId="all-alarms"
-              />
-            </Grid>
+            <RankingTable
+              title="Todos los Eventos por Tipo"
+              data={alarmTypesRanking}
+              icon={<Assessment color="primary" />}
+              type="top"
+              countBy={countBy}
+              isAlarmTypes={true}
+              tableRef={allAlarmsRef}
+              captureId="all-alarms"
+            />
             
             {/* Top 10 con Menos Alarmas */}
-            <Grid item xs={12} lg={4}>
-              <RankingTable
-                title={`Top 10 ${countBy === 'truck' ? 'Camiones' : 'Conductores'} con Menos Eventos`}
-                data={rankingsData.bestPerformers}
-                icon={<TrendingDown color="success" />}
-                type="best"
-                countBy={countBy}
-                tableRef={bestPerformersRef}
-                captureId="best-performers"
-              />
-            </Grid>
-          </Grid>
+            <RankingTable
+              title={`Top 10 ${countBy === 'truck' ? 'Camiones' : 'Conductores'} con Menos Eventos`}
+              data={rankingsData.bestPerformers}
+              icon={<TrendingDown color="success" />}
+              type="best"
+              countBy={countBy}
+              tableRef={bestPerformersRef}
+              captureId="best-performers"
+            />
+          </Box>
         )}
       </Container>
       
