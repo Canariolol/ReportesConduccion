@@ -65,7 +65,7 @@ print(f"Archivo generado: {archivo}")
 
 ## Parámetros
 
-- **empresa**: Nombre de la empresa/vehículo (default: "StandLite2")
+- **empresa**: Nombre de la empresa/vehículo (default: "Bosques Los Lagos")
 - **patente**: Patente del vehículo (default: "RZLH36")
 - **fecha_inicio_str**: Fecha de inicio en formato DD/MM/YYYY
 - **fecha_fin_str**: Fecha de fin en formato DD/MM/YYYY
